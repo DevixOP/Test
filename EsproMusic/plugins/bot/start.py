@@ -1,5 +1,5 @@
 import time
-import random 
+
 from pyrogram import filters
 from pyrogram.enums import ChatType
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
@@ -7,7 +7,7 @@ from youtubesearchpython.__future__ import VideosSearch
 
 import config
 from EsproMusic import app
-from EsproMusic.misc import SPECIAL_ID, _boot_
+from EsproMusic.misc import _boot_
 from EsproMusic.plugins.sudo.sudoers import sudoers_list
 from EsproMusic.utils.database import (
     add_served_chat,
@@ -23,35 +23,19 @@ from EsproMusic.utils.inline import help_pannel, private_panel, start_panel
 from config import BANNED_USERS
 from strings import get_string
 
-# List of images to choose randomly
-NEXIO = [
-    "https://files.catbox.moe/jf0yqq.jpg",
-    "https://files.catbox.moe/7w0ec2.jpg",
-    "https://files.catbox.moe/dfj1l8.jpg",
-    "https://files.catbox.moe/e7pbwj.jpg",
-    "https://files.catbox.moe/bta4qz.jpg",
-    "https://files.catbox.moe/1a1pu2.jpg",
-    "https://files.catbox.moe/xvirq4.jpg",
-    "https://files.catbox.moe/8dyj3u.jpg",
-    "https://files.catbox.moe/x63yfj.jpg",
-    "https://files.catbox.moe/3rtw9v.jpg",
-    "https://files.catbox.moe/0u6db2.jpg",
-]
 
 @app.on_message(filters.command(["start"]) & filters.private & ~BANNED_USERS)
 @LanguageStart
 async def start_pm(client, message: Message, _):
     await add_served_user(message.from_user.id)
-    
     if len(message.text.split()) > 1:
         name = message.text.split(None, 1)[1]
         if name[0:4] == "help":
             keyboard = help_pannel(_)
             return await message.reply_photo(
-                photo=random.choice(NEXIO),
+                photo=config.START_IMG_URL,
                 caption=_["help_1"].format(config.SUPPORT_CHAT),
                 reply_markup=keyboard,
-                has_spoiler=True
             )
         if name[0:3] == "sud":
             await sudoers_list(client=client, message=message, _=_)
@@ -92,7 +76,6 @@ async def start_pm(client, message: Message, _):
                 photo=thumbnail,
                 caption=searched_text,
                 reply_markup=key,
-                has_spoiler=True
             )
             if await is_on_off(2):
                 return await app.send_message(
@@ -101,38 +84,15 @@ async def start_pm(client, message: Message, _):
                 )
     else:
         out = private_panel(_)
-        
-        # --- ANIMATION START ---
-        baby = await message.reply_text(f"**__ᴅɪηɢ ᴅᴏηɢ.🥀__**")
-        await baby.edit_text(f"**__ᴅɪηɢ ᴅᴏηɢ..🥀__**")
-        await baby.edit_text(f"**__ᴅɪηɢ ᴅᴏηɢ...🥀__**")
-        await baby.edit_text(f"**__ᴅɪηɢ ᴅᴏηɢ....🥀__**")
-        await baby.edit_text(f"**__ᴅɪηɢ ᴅᴏηɢ.....🥀__**")
-        await baby.edit_text(f"**__sᴛᴧʀᴛɪηɢ.❤️‍🔥__**")
-        await baby.edit_text(f"**__sᴛᴧʀᴛɪηɢ..❤️‍🔥__**")
-        await baby.edit_text(f"**__sᴛᴧʀᴛɪηɢ...❤️‍🔥__**")
-        await baby.edit_text(f"**__sᴛᴧʀᴛɪηɢ....❤️‍🔥__**")
-        await baby.edit_text(f"**__sᴛᴧʀᴛɪηɢ.....❤️‍🔥__**")
-        await baby.edit_text(f"**__ʙσᴛ sᴛᴧʀᴛєᴅ.💤__**")
-        await baby.edit_text(f"**__ʙσᴛ sᴛᴧʀᴛєᴅ..💤__**")
-        await baby.edit_text(f"**__ʙσᴛ sᴛᴧʀᴛєᴅ...💤__**")
-        await baby.edit_text(f"**__ʙσᴛ sᴛᴧʀᴛєᴅ....💤__**")
-        await baby.edit_text(f"**__ʙσᴛ sᴛᴧʀᴛєᴅ.....💤__**")
-        await baby.delete()
-        # --- ANIMATION END ---
-
         await message.reply_photo(
-            photo=random.choice(NEXIO),
+            photo=config.START_IMG_URL,
             caption=_["start_2"].format(message.from_user.mention, app.mention),
             reply_markup=InlineKeyboardMarkup(out),
-            has_spoiler=True
         )
-        
-        # --- LOGGING FEATURE UPDATED HERE ---
         if await is_on_off(2):
             return await app.send_message(
                 chat_id=config.LOGGER_ID,
-                text=f"{message.from_user.mention} 🚀 Just Started the Bot!.\n\n<b>🆔 Telegram ID :</b> <code>{message.from_user.id}</code>\n<b>🔗 Username:  :</b> @{message.from_user.username}",
+                text=f"{message.from_user.mention} ᴊᴜsᴛ sᴛᴀʀᴛᴇᴅ ᴛʜᴇ ʙᴏᴛ.\n\n<b>ᴜsᴇʀ ɪᴅ :</b> <code>{message.from_user.id}</code>\n<b>ᴜsᴇʀɴᴀᴍᴇ :</b> @{message.from_user.username}",
             )
 
 
@@ -142,10 +102,9 @@ async def start_gp(client, message: Message, _):
     out = start_panel(_)
     uptime = int(time.time() - _boot_)
     await message.reply_photo(
-        photo=random.choice(NEXIO),
+        photo=config.START_IMG_URL,
         caption=_["start_1"].format(app.mention, get_readable_time(uptime)),
         reply_markup=InlineKeyboardMarkup(out),
-        has_spoiler=True
     )
     return await add_served_chat(message.chat.id)
 
@@ -178,7 +137,7 @@ async def welcome(client, message: Message):
 
                 out = start_panel(_)
                 await message.reply_photo(
-                    photo=random.choice(NEXIO),
+                    photo=config.START_IMG_URL,
                     caption=_["start_3"].format(
                         message.from_user.first_name,
                         app.mention,
@@ -186,7 +145,6 @@ async def welcome(client, message: Message):
                         app.mention,
                     ),
                     reply_markup=InlineKeyboardMarkup(out),
-                    has_spoiler=True
                 )
                 await add_served_chat(message.chat.id)
                 await message.stop_propagation()
