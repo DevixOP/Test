@@ -4,6 +4,7 @@ import requests
 from datetime import datetime
 from pyrogram import filters, enums
 from pyrogram.types import Message
+from pyrogram.enums import ChatMemberStatus
 from pyrogram.enums import ChatAction  # optional, but kept if your code uses it
 
 from EsproMusic import app
@@ -90,12 +91,12 @@ async def chatbot_toggle(client, message: Message):
         )
 
     # 2) Proper admin check
-    chat_member = await message.chat.get_member(message.from_user.id)
+        chat_member = await message.chat.get_member(message.from_user.id)
 
-    # DEBUG: yaha se status dekhne ke liye
+    # Debug optional
     await message.reply_text(f"Your status: {chat_member.status}")
 
-    if chat_member.status not in ("creator", "administrator", "owner"):
+    if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
         return await message.reply_text("⚠️ Only group admins can use this command.")
 
     # 3) Baaki pura tumhara existing logic same:
