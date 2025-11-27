@@ -5,6 +5,7 @@ from datetime import datetime
 from pyrogram import filters, enums
 from pyrogram.types import Message
 from pyrogram.enums import ChatMemberStatus
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.enums import ChatAction  # optional, but kept if your code uses it
 
 from EsproMusic import app
@@ -106,25 +107,44 @@ async def chatbot_toggle(client, message: Message):
     # 2) Proper admin check
     chat_member = await message.chat.get_member(message.from_user.id)
 
-    await message.reply_text(f"Debug: got /chatbot from {message.from_user.id}")
-    await message.reply_text(f"Your status: {chat_member.status}")
+# Build a mention for the user
+if message.from_user.username:
+    mention = f"@{message.from_user.username}"
+else:
+    mention = message.from_user.mention  # or message.from_user.first_name
+
+await message.reply_text(f"Debug: got /chatbot from {mention}")
 
     if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
         return await message.reply_text("⚠️ Only group admins can use this command.")
     # 3) Baaki pura tumhara existing logic same:
     cmd = message.command or []  # safe default
     if len(cmd) == 1:
-        status = "enabled ✅" if is_chat_enabled(message.chat.id) else "disabled ❌"
-        history_count = len(get_chat_memory(message.chat.id))
-        return await message.reply_text(
-            f"**AI Chatbot Status:** {status}\n"
-            f"**Memory:** {history_count} messages stored\n\n"
-            f"**Commands:**\n"
-            f"• `/chatbot enable` - Turn on AI\n"
-            f"• `/chatbot disable` - Turn off AI\n"
-            f"• `/chatbot clear` - Clear chat memory\n"
-            f"• `/chatbot stats` - View statistics"
-        )
+    status = "enabled ✅" if is_chat_enabled(message.chat.id) else "disabled ❌"
+    history_count = len(get_chat_memory(message.chat.id))
+
+    enable_text = stylize("🥀Enable🪽")
+    disable_text = stylize("💞Disable🖤")
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(enable_text, callback_data="chatbot_enable"),
+                InlineKeyboardButton(disable_text, callback_data="chatbot_disable"),
+            ]
+        ]
+    )
+
+    return await message.reply_text(
+        f"**AI Chatbot Status:** {status}\n"
+        f"**Memory:** {history_count} messages stored\n\n"
+        f"**Commands:**\n"
+        f"• `/chatbot enable` - Turn on AI\n"
+        f"• `/chatbot disable` - Turn off AI\n"
+        f"• `/chatbot clear` - Clear chat memory\n"
+        f"• `/chatbot stats` - View statistics",
+        reply_markup=keyboard,
+    )
 
     arg = cmd[1].lower()
 
@@ -133,8 +153,7 @@ async def chatbot_toggle(client, message: Message):
         set_chat_enabled(message.chat.id, True)
         return await message.reply_text(
             "✅ **AI Chatbot Enabled!**\n\n"
-            "Namaste🙏❤️. Reply to my messages ya phir mujhe mention karo! 💁‍♀️\n"
-            "Features: Memory, Context awareness, Multilingual"
+            "Namaste🙏❤️, I'm Shreya How Are You?. Reply to my messages ya phir mujhe mention karo! 💁‍♀️\n"
         )
 
     elif arg in ["off", "disable"]:
@@ -308,9 +327,8 @@ async def ai_chat_handler(client, message: Message):
     
     # Get AI response with memory
     reply = ask_mistral_with_memory(message.chat.id, text)
-    
-    # Send response
-    await message.reply_text(reply, disable_web_page_preview=True)
+styled_reply = stylize(reply)
+await message.reply_text(styled_reply, disable_web_page_preview=True)
 
 # ============= DIRECT MESSAGE SUPPORT =============
 
@@ -332,5 +350,5 @@ async def ai_dm_handler(client, message: Message):
     
     # Use user's personal chat ID for memory
     reply = ask_mistral_with_memory(message.from_user.id, text)
-    
-    await message.reply_text(reply, disable_web_page_preview=True)
+styled_reply = stylize(reply)
+await message.reply_text(styled_reply, disable_web_page_preview=True)
