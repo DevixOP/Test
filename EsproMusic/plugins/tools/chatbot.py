@@ -51,19 +51,22 @@ def add_to_memory(chat_id: int, role: str, content: str):
     """Add message to chat memory with timestamp"""
     memory = load_json(MEMORY_FILE)
     chat_key = str(chat_id)
-    
+
     if chat_key not in memory:
         memory[chat_key] = []
-    
+
     memory[chat_key].append({
         "role": role,
         "content": content,
         "timestamp": datetime.now().isoformat()
     })
-    
+
     # Keep only last MAX_HISTORY messages
     if len(memory[chat_key]) > MAX_HISTORY:
         memory[chat_key] = memory[chat_key][-MAX_HISTORY:]
+
+    # IMPORTANT: save after modifying
+    save_json(MEMORY_FILE, memory)
 
 def clear_chat_memory(chat_id: int):
     """Clear conversation history for a chat"""
@@ -71,7 +74,7 @@ def clear_chat_memory(chat_id: int):
     if str(chat_id) in memory:
         del memory[str(chat_id)]
         save_json(MEMORY_FILE, memory)
-save_json(MEMORY_FILE, memory)
+
 
 # ============= COMMANDS =============
 
