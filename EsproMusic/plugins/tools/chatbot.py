@@ -225,18 +225,16 @@ def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
 @app.on_message(
     filters.group
     & filters.text
-    & ~filters.command
-    & ~filters.via_bot
 )
 async def ai_chat_handler(client, message: Message):
-    """Main AI chat handler with smart triggering"""
-    
+    # Ignore commands (start with /)
+    if message.text and message.text.startswith("/"):
+        return
+    # Ignore messages via other bots
+    if getattr(message, "via_bot", None):
+        return
     # Only work when enabled
     if not is_chat_enabled(message.chat.id):
-        return
-    
-    # Don't reply to other bots
-    if message.from_user and message.from_user.is_bot:
         return
     
     # Smart triggering - reply when:
@@ -290,16 +288,11 @@ async def ai_chat_handler(client, message: Message):
 @app.on_message(
     filters.private
     & filters.text
-    & ~filters.command
 )
 async def ai_dm_handler(client, message: Message):
-    """Handle direct messages to bot"""
-    
     if not message.from_user or message.from_user.is_bot:
         return
-    
-    text = message.text.strip()
-    if not text:
+    if message.text and message.text.startswith("/"):
         return
     
     await message.chat.send_action(ChatAction.TYPING)
