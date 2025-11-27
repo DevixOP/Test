@@ -93,7 +93,7 @@ async def chatbot_toggle(client, message: Message):
     # 2) Proper admin check
     chat_member = await message.chat.get_member(message.from_user.id)
 
-    # Debug optional
+    await message.reply_text(f"Debug: got /chatbot from {message.from_user.id}")
     await message.reply_text(f"Your status: {chat_member.status}")
 
     if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
