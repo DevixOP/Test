@@ -351,11 +351,11 @@ async def ai_dm_handler(client, message: Message):
     text = message.text.strip()
     if not text:
         return
-    
-    await message.reply_chat_action(enums.ChatAction.TYPING)  # [web:36]
-    
+
+    await message.reply_chat_action(enums.ChatAction.TYPING)
+
     # Use user's personal chat ID for memory
     reply = ask_mistral_with_memory(message.from_user.id, text)
-styled_reply = stylize(reply)
-await message.reply_text(styled_reply, disable_web_page_preview=True)
+    styled_reply = stylize(reply)
+    await message.reply_text(styled_reply, disable_web_page_preview=True)
 
