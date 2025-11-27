@@ -23,7 +23,6 @@ def stylize(text):
     return "".join(fancy.get(c, c) for c in text)
 
 
-
 # ============= CONFIG =============
 CONFIG_FILE = "chatbot_config.json"
 MEMORY_FILE = "chatbot_memory.json"
@@ -95,7 +94,6 @@ def clear_chat_memory(chat_id: int):
 # ============= COMMANDS =============
 
 @app.on_message(filters.command(["chatbot"]) & filters.group)
-@app.on_message(filters.command(["chatbot"]) & filters.group)
 async def chatbot_toggle(client, message: Message):
     """Enable/disable chatbot and manage settings"""
 
@@ -120,7 +118,7 @@ async def chatbot_toggle(client, message: Message):
     if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
         return await message.reply_text("⚠️ Only group admins can use this command.")
 
-    # 3) Baaki pura tumhara existing logic same:
+    # 3) Existing logic
     cmd = message.command or []  # safe default
 
     if len(cmd) == 1:
@@ -188,7 +186,6 @@ async def chatbot_toggle(client, message: Message):
             "`/chatbot enable` | `/chatbot disable`\n"
             "`/chatbot clear` | `/chatbot stats`"
         )
-
 
 
 # ============= MISTRAL AI ENGINE =============
@@ -272,6 +269,7 @@ def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
     except Exception as e:
         return f"⚠️ Error: {str(e)[:100]}"
 
+
 # ============= CHAT HANDLER =============
 
 @app.on_message(
@@ -327,13 +325,12 @@ async def ai_chat_handler(client, message: Message):
         return await message.reply_text("Haan bolo, kya help chahiye? 😊")
     
     # Show typing indicator (recommended style)
-    await message.reply_chat_action(enums.ChatAction.TYPING)  # [web:36]
+    await message.reply_chat_action(enums.ChatAction.TYPING)
     
     # Get AI response with memory
     reply = ask_mistral_with_memory(message.chat.id, text)
-styled_reply = stylize(reply)
-await message.reply_text(styled_reply, disable_web_page_preview=True)
-
+    styled_reply = stylize(reply)
+    await message.reply_text(styled_reply, disable_web_page_preview=True)
 
 
 # ============= DIRECT MESSAGE SUPPORT =============
@@ -358,4 +355,3 @@ async def ai_dm_handler(client, message: Message):
     reply = ask_mistral_with_memory(message.from_user.id, text)
     styled_reply = stylize(reply)
     await message.reply_text(styled_reply, disable_web_page_preview=True)
-
