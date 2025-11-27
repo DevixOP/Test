@@ -91,14 +91,13 @@ async def chatbot_toggle(client, message: Message):
         )
 
     # 2) Proper admin check
-        chat_member = await message.chat.get_member(message.from_user.id)
+    chat_member = await message.chat.get_member(message.from_user.id)
 
     # Debug optional
     await message.reply_text(f"Your status: {chat_member.status}")
 
     if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
         return await message.reply_text("⚠️ Only group admins can use this command.")
-
     # 3) Baaki pura tumhara existing logic same:
     if len(message.command) == 1:
         status = "enabled ✅" if is_chat_enabled(message.chat.id) else "disabled ❌"
