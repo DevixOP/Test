@@ -112,7 +112,8 @@ async def chatbot_toggle(client, message: Message):
     if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
         return await message.reply_text("⚠️ Only group admins can use this command.")
     # 3) Baaki pura tumhara existing logic same:
-    if len(message.command) == 1:
+    cmd = message.command or []  # safe default
+    if len(cmd) == 1:
         status = "enabled ✅" if is_chat_enabled(message.chat.id) else "disabled ❌"
         history_count = len(get_chat_memory(message.chat.id))
         return await message.reply_text(
@@ -125,7 +126,8 @@ async def chatbot_toggle(client, message: Message):
             f"• `/chatbot stats` - View statistics"
         )
 
-    arg = message.command[1].lower()
+    arg = cmd[1].lower()
+
 
     if arg in ["on", "enable"]:
         set_chat_enabled(message.chat.id, True)
