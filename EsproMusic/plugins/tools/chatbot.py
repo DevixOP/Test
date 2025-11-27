@@ -274,11 +274,18 @@ async def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
             # Expecting structure: {"choices":[{"message":{"content":"..."}}], ...}
             reply = j["choices"][0]["message"]["content"].strip()
         
-        # Save to memory (note: synchronous file I/O)
+                # Save to memory
         add_to_memory(chat_id, "user", user_message)
         add_to_memory(chat_id, "assistant", reply)
-        
+
+        # owner related query pe username force add karo
+        lower_msg = user_message.lower()
+        owner_keywords = ["owner", "creator", "developer"]
+        if any(k in lower_msg for k in owner_keywords):
+            reply = f"{reply}\n\nMera owner @WTF_Phantom 🥀🪽 hai. 💝"
+
         return reply
+
     except httpx.HTTPStatusError as e:
         status = e.response.status_code
         if status == 401:
