@@ -1,10 +1,9 @@
 import os
 import json
-import requests
+import httpx
 from datetime import datetime
 from pyrogram import filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.enums import ChatMemberStatus, ChatAction
 
 from EsproMusic import app
 
@@ -113,9 +112,7 @@ async def chatbot_toggle(client, message: Message):
     else:
         mention = message.from_user.mention  # or message.from_user.first_name
 
-    await message.reply_text(f"Debug: got /chatbot from {mention}")
-
-    if chat_member.status not in [ChatMemberStatus.OWNER, ChatMemberStatus.ADMINISTRATOR]:
+    if chat_member.status not in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]:
         return await message.reply_text("⚠️ Only group admins can use this command.")
 
     # 3) Existing logic
@@ -139,13 +136,14 @@ async def chatbot_toggle(client, message: Message):
 
         return await message.reply_text(
             f"**AI Chatbot Status:** {status}\n"
-            f"**Memory:** {history_count} messages stored\n\n"
+            f"**Memory:** {historyCount := history_count} messages stored\n\n"
             f"**Commands:**\n"
             f"• `/chatbot enable` - Turn on AI\n"
             f"• `/chatbot disable` - Turn off AI\n"
             f"• `/chatbot clear` - Clear chat memory\n"
             f"• `/chatbot stats` - View statistics",
             reply_markup=keyboard,
+            parse_mode=enums.ParseMode.MARKDOWN
         )
 
     arg = cmd[1].lower()
@@ -154,7 +152,8 @@ async def chatbot_toggle(client, message: Message):
         set_chat_enabled(message.chat.id, True)
         return await message.reply_text(
             "✅ **AI Chatbot Enabled!**\n\n"
-            "Namaste🙏❤️, I'm Shreya How Are You?. Reply to my messages ya phir mujhe mention karo! 💁‍♀️\n"
+            "Namaste🙏❤️, I'm Shreya How Are You?. Reply to my messages ya phir mujhe mention karo! 💁‍♀️\n",
+            parse_mode=enums.ParseMode.MARKDOWN
         )
 
     elif arg in ["off", "disable"]:
@@ -177,20 +176,20 @@ async def chatbot_toggle(client, message: Message):
             f"• Total messages: {len(history)}\n"
             f"• User messages: {user_msgs}\n"
             f"• AI responses: {ai_msgs}\n"
-            f"• Memory limit: {MAX_HISTORY} messages"
+            f"• Memory limit: {MAX_HISTORY} messages",
+            parse_mode=enums.ParseMode.MARKDOWN
         )
 
     else:
         return await message.reply_text(
             "Usage:\n"
             "`/chatbot enable` | `/chatbot disable`\n"
-            "`/chatbot clear` | `/chatbot stats`"
+            "`/chatbot clear` | `/chatbot stats`",
+            parse_mode=enums.ParseMode.MARKDOWN
         )
 
 
 # ============= BUTTON CALLBACK =============
-
-from pyrogram import filters as _filters  # optional: reuse filters name if needed
 
 @app.on_callback_query(filters.regex("^chatbot_(enable|disable)$"))
 async def chatbot_toggle_buttons(client, query):
@@ -207,13 +206,13 @@ async def chatbot_toggle_buttons(client, query):
         text = "🚫 AI Chatbot disabled."
 
     await query.answer("Updated chatbot status ✅", show_alert=False)
-    await query.message.edit_text(text)
+    await query.message.edit_text(text, parse_mode=enums.ParseMode.MARKDOWN)
 
 
 # ============= MISTRAL AI ENGINE =============
 
-def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
-    """Call Mistral API with conversation history"""
+async def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
+    """Call Mistral API with conversation history (async)"""
     api_key = os.getenv("MISTRAL_API_KEY")
     if not api_key:
         return "⚠️ Mistral API key not configured. Contact bot owner."
@@ -271,25 +270,28 @@ def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
     }
     
     try:
-        resp = requests.post(MISTRAL_API_URL, headers=headers, json=data, timeout=60)
-        resp.raise_for_status()
-        j = resp.json()
-        reply = j["choices"][0]["message"]["content"].strip()
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            resp = await client.post(MISTRAL_API_URL, headers=headers, json=data)
+            resp.raise_for_status()
+            j = resp.json()
+            # Expecting structure: {"choices":[{"message":{"content":"..."}}], ...}
+            reply = j["choices"][0]["message"]["content"].strip()
         
-        # Save to memory
+        # Save to memory (note: synchronous file I/O)
         add_to_memory(chat_id, "user", user_message)
         add_to_memory(chat_id, "assistant", reply)
         
         return reply
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 401:
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code
+        if status == 401:
             return "❌ Invalid API key. Check your MISTRAL_API_KEY environment variable."
-        elif e.response.status_code == 429:
+        elif status == 429:
             return "⏳ API rate limit reached. Try again in a minute."
         else:
-            return f"❌ API Error: {e.response.status_code}"
+            return f"❌ API Error: {status}"
     except Exception as e:
-        return f"⚠️ Error: {str(e)[:100]}"
+        return f"⚠️ Error: {str(e)[:200]}"
 
 
 # ============= CHAT HANDLER =============
@@ -325,7 +327,8 @@ async def ai_chat_handler(client, message: Message):
     # Check mentions
     if message.entities:
         for entity in message.entities:
-            if entity.type == "mention":
+            ent_type = getattr(entity, "type", None)
+            if ent_type == "mention" or ent_type == enums.MessageEntityType.MENTION:
                 mentioned_user = message.text[entity.offset:entity.offset + entity.length]
                 if client.me and client.me.username and f"@{client.me.username}".lower() in mentioned_user.lower():
                     should_reply = True
@@ -346,11 +349,11 @@ async def ai_chat_handler(client, message: Message):
     if not text:
         return await message.reply_text("Haan bolo, kya help chahiye? 😊")
     
-    # Show typing indicator (recommended style)
+    # Show typing indicator
     await message.reply_chat_action(enums.ChatAction.TYPING)
     
-    # Get AI response with memory
-    reply = ask_mistral_with_memory(message.chat.id, text)
+    # Get AI response with memory (async)
+    reply = await ask_mistral_with_memory(message.chat.id, text)
     styled_reply = stylize(reply)
     await message.reply_text(styled_reply, disable_web_page_preview=True)
 
@@ -374,6 +377,6 @@ async def ai_dm_handler(client, message: Message):
     await message.reply_chat_action(enums.ChatAction.TYPING)
 
     # Use user's personal chat ID for memory
-    reply = ask_mistral_with_memory(message.from_user.id, text)
+    reply = await ask_mistral_with_memory(message.from_user.id, text)
     styled_reply = stylize(reply)
     await message.reply_text(styled_reply, disable_web_page_preview=True)
