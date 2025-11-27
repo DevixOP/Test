@@ -116,34 +116,43 @@ async def chatbot_toggle(client, message: Message):
     if chat_member.status not in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR]:
         return await message.reply_text("⚠️ Only group admins can use this command.")
 
-    # 3) Existing logic
-    cmd = message.command or []  # safe default
+    # 3) Parse command (version-safe)
+    text = message.text or ""
+    cmd = text.split()
 
     if len(cmd) == 1:
         status = "enabled ✅" if is_chat_enabled(message.chat.id) else "disabled ❌"
         history_count = len(get_chat_memory(message.chat.id))
 
-        enable_text = stylize("🥀Enable🪽")
-        disable_text = stylize("💞Disable🖤")
+        enable_text = stylize("Enable")
+        disable_text = stylize("Disable")
 
         keyboard = InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(enable_text, callback_data="chatbot_enable"),
-                    InlineKeyboardButton(disable_text, callback_data="chatbot_disable"),
+                    InlineKeyboardButton(f"🥀{enable_text}🪽", callback_data="chatbot_enable"),
+                    InlineKeyboardButton(f"💞{disable_text}🖤", callback_data="chatbot_disable"),
                 ]
             ]
         )
 
         return await message.reply_text(
             f"**AI Chatbot Status:** {status}\n"
-            f"**Memory:** {historyCount := history_count} messages stored\n\n"
+            f"**Memory:** {history_count} messages stored\n\n"
             f"**Commands:**\n"
             f"• `/chatbot enable` - Turn on AI\n"
             f"• `/chatbot disable` - Turn off AI\n"
             f"• `/chatbot clear` - Clear chat memory\n"
             f"• `/chatbot stats` - View statistics",
             reply_markup=keyboard,
+            parse_mode=enums.ParseMode.MARKDOWN
+        )
+
+    if len(cmd) < 2:
+        return await message.reply_text(
+            "Usage:\n"
+            "`/chatbot enable` | `/chatbot disable`\n"
+            "`/chatbot clear` | `/chatbot stats`",
             parse_mode=enums.ParseMode.MARKDOWN
         )
 
@@ -221,25 +230,24 @@ async def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
     # Build conversation history
     history = get_chat_memory(chat_id)
     messages = [
-    {
-        "role": "system",
-        "content": (
-            "You are a helpful, friendly FEMALE Telegram group assistant named \"Shreya\". "
-            "Talk like a young Indian girl, using natural Hinglish (mix of Hindi and English in Roman script). "
-            "Keep responses concise (2-3 sentences max) unless user asks for more detail. "
-            "You can discuss any topic, answer questions, have casual conversations, "
-            "explain concepts, tell jokes, give advice, and help with information. "
-            "Remember previous context from this conversation. "
-            "Be warm, cute, a little playful but respectful, and use casual words like: 'haan', 'nahi', "
-            "'acha', 'thik hai', 'yaar', 'lol', 'arey'. "
-            "IMPORTANT: Jab bhi koi pooche 'owner kon hai', 'tumhara owner kaun hai', "
-            "'bot ka owner', 'creator', 'developer' ya aise koi sawaal, "
-            "toh hamesha batao ki mera owner @WTF_Phantom 🥀🪽 hai, "
-            "aur normal style mein thoda Hinglish mein answer do."
-        )
-    }
-]
-
+        {
+            "role": "system",
+            "content": (
+                "You are a helpful, friendly FEMALE Telegram group assistant named \"Shreya\". "
+                "Talk like a young Indian girl, using natural Hinglish (mix of Hindi and English in Roman script). "
+                "Keep responses concise (2-3 sentences max) unless user asks for more detail. "
+                "You can discuss any topic, answer questions, have casual conversations, "
+                "explain concepts, tell jokes, give advice, and help with information. "
+                "Remember previous context from this conversation. "
+                "Be warm, cute, a little playful but respectful, and use casual words like: 'haan', 'nahi', "
+                "'acha', 'thik hai', 'yaar', 'lol', 'arey'. "
+                "IMPORTANT: Jab bhi koi pooche 'owner kon hai', 'tumhara owner kaun hai', "
+                "'bot ka owner', 'creator', 'developer' ya aise koi sawaal, "
+                "toh hamesha batao ki mera owner @WTF_Phantom 🥀🪽 hai, "
+                "aur normal style mein thoda Hinglish mein answer do."
+            )
+        }
+    ]
     
     # Add conversation history
     for msg in history[-10:]:  # Last 10 messages for context
@@ -275,7 +283,7 @@ async def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
             # Expecting structure: {"choices":[{"message":{"content":"..."}}], ...}
             reply = j["choices"][0]["message"]["content"].strip()
         
-                # Save to memory
+        # Save to memory
         add_to_memory(chat_id, "user", user_message)
         add_to_memory(chat_id, "assistant", reply)
 
@@ -341,9 +349,9 @@ async def ai_chat_handler(client, message: Message):
                     text = text.replace(mentioned_user, "").strip()
     
     # Check trigger words/prefixes
-    triggers = ["!ai", "/ai", "Hey shreya", "Shreya", "AI", "ai"]
+    triggers = ["!ai", "/ai", "hey shreya", "shreya", "ai"]
     for trigger in triggers:
-        if text.lower().startswith(trigger):
+        if text.lower().startswith(trigger.lower()):
             should_reply = True
             text = text[len(trigger):].strip()
             break
