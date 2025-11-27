@@ -95,7 +95,7 @@ async def chatbot_toggle(client, message: Message):
     # DEBUG: yaha se status dekhne ke liye
     await message.reply_text(f"Your status: {chat_member.status}")
 
-    if chat_member.status not in ("creator", "administrator"):
+    if chat_member.status not in ("creator", "administrator", "owner"):
         return await message.reply_text("⚠️ Only group admins can use this command.")
 
     # 3) Baaki pura tumhara existing logic same:
