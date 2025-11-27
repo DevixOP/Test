@@ -64,8 +64,6 @@ def add_to_memory(chat_id: int, role: str, content: str):
     # Keep only last MAX_HISTORY messages
     if len(memory[chat_key]) > MAX_HISTORY:
         memory[chat_key] = memory[chat_key][-MAX_HISTORY:]
-    
-    save_json(MEMORY_FILE, memory)
 
 def clear_chat_memory(chat_id: int):
     """Clear conversation history for a chat"""
