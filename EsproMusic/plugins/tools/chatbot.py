@@ -6,6 +6,7 @@ from pyrogram import filters, enums
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 
 from EsproMusic import app
+from config import MISTRAL_API_KEY
 
 
 def stylize(text):
@@ -213,7 +214,7 @@ async def chatbot_toggle_buttons(client, query):
 
 async def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
     """Call Mistral API with conversation history (async)"""
-    api_key = os.getenv("MISTRAL_API_KEY")
+    api_key = MISTRAL_API_KEY
     if not api_key:
         return "⚠️ Mistral API key not configured. Contact bot owner."
     
