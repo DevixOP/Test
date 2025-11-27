@@ -188,6 +188,28 @@ async def chatbot_toggle(client, message: Message):
         )
 
 
+# ============= BUTTON CALLBACK =============
+
+from pyrogram import filters as _filters  # optional: reuse filters name if needed
+
+@app.on_callback_query(filters.regex("^chatbot_(enable|disable)$"))
+async def chatbot_toggle_buttons(client, query):
+    chat_id = query.message.chat.id
+
+    if query.data == "chatbot_enable":
+        set_chat_enabled(chat_id, True)
+        text = (
+            "✅ **AI Chatbot Enabled!**\n\n"
+            "Namaste🙏❤️, I'm Shreya How Are You?. Reply to my messages ya phir mujhe mention karo! 💁‍♀️\n"
+        )
+    else:
+        set_chat_enabled(chat_id, False)
+        text = "🚫 AI Chatbot disabled."
+
+    await query.answer("Updated chatbot status ✅", show_alert=False)
+    await query.message.edit_text(text)
+
+
 # ============= MISTRAL AI ENGINE =============
 
 def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
