@@ -1,4 +1,79 @@
- save_json(MEMORY_FILE, memory)
+import os
+import json
+import requests
+from datetime import datetime
+from pyrogram import filters, enums
+from pyrogram.types import Message
+from pyrogram.enums import ChatAction  # optional, but kept if your code uses it
+
+from EsproMusic import app
+
+# ============= CONFIG =============
+CONFIG_FILE = "chatbot_config.json"
+MEMORY_FILE = "chatbot_memory.json"
+MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions"
+MISTRAL_MODEL = "mistral-small-latest"  # or mistral-medium, mistral-large
+MAX_HISTORY = 20  # messages to remember per chat
+
+# ============= STORAGE =============
+
+def load_json(filename):
+    if not os.path.exists(filename):
+        return {}
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_json(filename, data):
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
+
+def is_chat_enabled(chat_id: int) -> bool:
+    cfg = load_json(CONFIG_FILE)
+    return str(chat_id) in cfg and cfg[str(chat_id)] is True
+
+def set_chat_enabled(chat_id: int, value: bool):
+    cfg = load_json(CONFIG_FILE)
+    cfg[str(chat_id)] = value
+    save_json(CONFIG_FILE, cfg)
+
+def get_chat_memory(chat_id: int) -> list:
+    """Get conversation history for a specific chat"""
+    memory = load_json(MEMORY_FILE)
+    return memory.get(str(chat_id), [])
+
+def add_to_memory(chat_id: int, role: str, content: str):
+    """Add message to chat memory with timestamp"""
+    memory = load_json(MEMORY_FILE)
+    chat_key = str(chat_id)
+    
+    if chat_key not in memory:
+        memory[chat_key] = []
+    
+    memory[chat_key].append({
+        "role": role,
+        "content": content,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+    # Keep only last MAX_HISTORY messages
+    if len(memory[chat_key]) > MAX_HISTORY:
+        memory[chat_key] = memory[chat_key][-MAX_HISTORY:]
+    
+    save_json(MEMORY_FILE, memory)
+
+def clear_chat_memory(chat_id: int):
+    """Clear conversation history for a chat"""
+    memory = load_json(MEMORY_FILE)
+    if str(chat_id) in memory:
+        del memory[str(chat_id)]
+        save_json(MEMORY_FILE, memory)
+save_json(MEMORY_FILE, memory)
 
 # ============= COMMANDS =============
 
