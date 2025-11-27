@@ -225,7 +225,6 @@ def ask_mistral_with_memory(chat_id: int, user_message: str) -> str:
 @app.on_message(
     filters.group
     & filters.text
-    & ~filters.edited
     & ~filters.command
     & ~filters.via_bot
 )
@@ -291,7 +290,6 @@ async def ai_chat_handler(client, message: Message):
 @app.on_message(
     filters.private
     & filters.text
-    & ~filters.edited
     & ~filters.command
 )
 async def ai_dm_handler(client, message: Message):
