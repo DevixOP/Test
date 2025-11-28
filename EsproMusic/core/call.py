@@ -38,12 +38,10 @@ from EsproMusic.utils.stream.autoclear import auto_clean
 from EsproMusic.utils.thumbnails import get_thumb
 from strings import get_string
 
+# Note: vclogger import removed entirely because vclogger.py handles it now.
 
 autoend = {}
 counter = {}
-
-VC_WATCH_INTERVAL = 5  # seconds
-
 
 async def _clear_(chat_id: int):
     db[chat_id] = []
@@ -104,124 +102,6 @@ class Call(PyTgCalls):
             cache_duration=100,
         )
 
-        # VC watcher state
-        self._vc_watch_tasks = {}        # chat_id -> asyncio.Task
-        self._vc_last_participants = {}  # chat_id -> set(user_ids)
-
-    # ========== INTERNAL VC WATCHER (RAW) ==========
-
-    async def _get_group_call(self, assistant, chat_id: int):
-        """
-        Dialog se current group call ka InputGroupCall banata hai.[2][3]
-        """
-        try:
-            dialog = await assistant.get_dialog(chat_id)
-            if not dialog or not dialog.chat or not getattr(dialog.chat, "call", None):
-                return None
-            group_call = dialog.chat.call
-            return raw.types.InputGroupCall(
-                id=group_call.id,
-                access_hash=group_call.access_hash,
-            )
-        except Exception:
-            return None
-
-    # ========== INTERNAL VC WATCHER (FIXED) ==========
-
-    async def _fetch_vc_participants(self, assistant, chat_id: int) -> set[int]:
-        """
-        Fixed: Force refreshes chat to get latest VC participants.
-        """
-        try:
-            # Step 1: Force refresh chat info to get valid InputGroupCall
-            # Agar purana cache hoga toh participants nahi milenge
-            chat_peer = await assistant.resolve_peer(chat_id)
-            full_chat = await assistant.invoke(
-                raw.functions.messages.GetFullChat(chat_id=int(f"-100{chat_id}"[4:]))
-            )
-            
-            call = full_chat.full_chat.call
-            if not call:
-                return set()
-
-            input_call = raw.types.InputGroupCall(
-                id=call.id,
-                access_hash=call.access_hash,
-            )
-
-            # Step 2: Get Participants
-            resp = await assistant.invoke(
-                raw.functions.phone.GetGroupParticipants(
-                    call=input_call,
-                    ids=[],
-                    sources=[],
-                    offset="",
-                    limit=200,
-                )
-            )
-
-            ids = set()
-            for p in resp.participants:
-                peer = p.peer
-                if isinstance(peer, raw.types.PeerUser):
-                    ids.add(peer.user_id)
-            return ids
-        except Exception as e:
-            # Error print karein taaki pata chale kyu fail hua
-            # print(f"[VC WATCH ERROR] {chat_id}: {e}")
-            return set()
-
-    async def _vc_watch_loop(self, chat_id: int):
-        """
-        Fixed loop with error handling
-        """
-        assistant = await group_assistant(self, chat_id)
-        prev_ids = self._vc_last_participants.get(chat_id, set())
-
-        while True:
-            try:
-                curr_ids = await self._fetch_vc_participants(assistant, chat_id)
-
-                # Comparision
-                joined = curr_ids - prev_ids
-                left = prev_ids - curr_ids
-
-                # Logic Call
-                if joined:
-                    for uid in joined:
-                        # Music bot khud ko ignore kare
-                        if uid == assistant.me.id:
-                            continue
-                        try:
-                            await process_vc_participant(chat_id, uid, joined=True, left=False)
-                        except Exception:
-                            pass
-                
-                if left:
-                    for uid in left:
-                        # Music bot khud ko ignore kare
-                        if uid == assistant.me.id:
-                            continue
-                        try:
-                            await process_vc_participant(chat_id, uid, joined=False, left=True)
-                        except Exception:
-                            pass
-
-                prev_ids = curr_ids
-                self._vc_last_participants[chat_id] = curr_ids
-
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"[VC WATCH LOOP] error in chat {chat_id}: {e}")
-
-            await asyncio.sleep(VC_WATCH_INTERVAL)
-
-        self._vc_watch_tasks.pop(chat_id, None)
-        self._vc_last_participants.pop(chat_id, None)
-
-    # ========== NORMAL METHODS (ORIGINAL LOGIC) ==========
-
     async def pause_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         await assistant.pause_stream(chat_id)
@@ -237,7 +117,6 @@ class Call(PyTgCalls):
             await assistant.leave_group_call(chat_id)
         except:
             pass
-        self._stop_vc_watch(chat_id)
 
     async def stop_stream_force(self, chat_id: int):
         try:
@@ -269,7 +148,6 @@ class Call(PyTgCalls):
             await _clear_(chat_id)
         except:
             pass
-        self._stop_vc_watch(chat_id)
 
     async def speedup_stream(self, chat_id: int, file_path, speed, playing):
         assistant = await group_assistant(self, chat_id)
@@ -351,7 +229,6 @@ class Call(PyTgCalls):
             await assistant.leave_group_call(chat_id)
         except:
             pass
-        self._stop_vc_watch(chat_id)
 
     async def skip_stream(
         self,
@@ -443,8 +320,6 @@ class Call(PyTgCalls):
             if users == 1:
                 autoend[chat_id] = datetime.now() + timedelta(minutes=1)
 
-        self._ensure_vc_watch(chat_id)
-
     async def change_stream(self, client, chat_id):
         check = db.get(chat_id)
         popped = None
@@ -458,12 +333,10 @@ class Call(PyTgCalls):
             await auto_clean(popped)
             if not check:
                 await _clear_(chat_id)
-                self._stop_vc_watch(chat_id)
                 return await client.leave_group_call(chat_id)
         except:
             try:
                 await _clear_(chat_id)
-                self._stop_vc_watch(chat_id)
                 return await client.leave_group_call(chat_id)
             except:
                 return
