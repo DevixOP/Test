@@ -1,37 +1,25 @@
 import asyncio
 import random
-from pyrogram import filters, Client, raw
+from pyrogram import filters, Client, raw, enums
 from pyrogram.types import Message
-from pyrogram.enums import ChatMemberStatus
+from pyrogram.enums import ChatMemberStatus, ParseMode
 from pyrogram.errors import FloodWait
 
 from EsproMusic import app
 from EsproMusic.misc import SUDOERS
 
-# Hum Ritik object se Userbot client lenge
+# Ritik object se hum Userbot client lenge
 from EsproMusic.core.call import Ritik 
 
 # ==================== CONFIG ====================
 
-JOIN_TEXT = [
-    "🎙️ {user} joined the voice chat!",
-    "👋 {user} is now in the voice chat!",
-    "🎵 {user} hopped into the voice chat!",
-]
+# Aapke naye messages
+JOIN_TEXT = "{user} ✨  ɪs ɴᴏᴡ ɪɴ ᴛʜᴇ ᴠᴄ – ᴡᴇʟᴄᴏᴍᴇ ᴀʙᴏᴀʀᴅ! 💫"
+LEFT_TEXT = "{user} ✌️  sᴀɪᴅ ɢᴏᴏᴅʙʏᴇ – ᴄᴏᴍᴇ ʙᴀᴄᴋ ᴀɴᴅ ᴊᴏɪɴ ᴛʜᴇ ғᴜɴ ᴀɢᴀɪɴ! 🎶"
 
-LEFT_TEXT = [
-    "👋 {user} left the voice chat!",
-    "🚪 {user} has exited the voice chat!",
-    "💨 {user} disconnected from voice chat!",
-]
-
-# Database: chat_id -> True/False
+# Database & Cache
 VC_LOGGER_DB: dict[int, bool] = {}
-
-# Cache: chat_id -> Set of user_ids
 VC_PARTICIPANTS_CACHE: dict[int, set] = {}
-
-# Loop control
 LOOP_STARTED = False
 
 # ==================== STATE HELPERS ====================
@@ -44,37 +32,30 @@ def set_vclogger(chat_id: int, enabled: bool) -> None:
     if not enabled:
         VC_PARTICIPANTS_CACHE.pop(chat_id, None)
 
-# ==================== POWERFUL RAW API FETCHER ====================
+# ==================== RAW API FETCHER ====================
 
 async def get_vc_participants(userbot: Client, chat_id: int) -> set:
     try:
-        # 1. Peer Resolve karo (Supergroup/Channel handle karne ke liye)
         peer = await userbot.resolve_peer(chat_id)
         
-        # 2. Full Chat Info nikalo
-        # Note: Supergroups ke liye channels.GetFullChannel lagta hai
         try:
             full_chat = await userbot.invoke(
                 raw.functions.channels.GetFullChannel(channel=peer)
             )
         except:
-            # Agar basic group hai to fallback
             full_chat = await userbot.invoke(
                 raw.functions.messages.GetFullChat(chat_id=int(str(chat_id).replace("-100", "")))
             )
         
-        # 3. Check karo Call active hai ya nahi
         call = full_chat.full_chat.call
         if not call:
             return set()
 
-        # 4. InputGroupCall object banao
         input_call = raw.types.InputGroupCall(
             id=call.id,
             access_hash=call.access_hash,
         )
 
-        # 5. Participants fetch karo
         participants_result = await userbot.invoke(
             raw.functions.phone.GetGroupParticipants(
                 call=input_call,
@@ -85,7 +66,6 @@ async def get_vc_participants(userbot: Client, chat_id: int) -> set:
             )
         )
 
-        # 6. IDs extract karo
         user_ids = set()
         for participant in participants_result.participants:
             peer_info = participant.peer
@@ -94,11 +74,10 @@ async def get_vc_participants(userbot: Client, chat_id: int) -> set:
         
         return user_ids
 
-    except Exception as e:
-        print(f"[VC ERROR] Chat: {chat_id} | Error: {e}")
+    except Exception:
         return set()
 
-# ==================== BACKGROUND WATCHER LOOP ====================
+# ==================== BACKGROUND WATCHER ====================
 
 async def vc_logger_watcher():
     global LOOP_STARTED
@@ -109,7 +88,6 @@ async def vc_logger_watcher():
     userbot = Ritik.userbot1
 
     while True:
-        # Get enabled chats
         active_chats = [chat_id for chat_id, enabled in VC_LOGGER_DB.items() if enabled]
 
         if not active_chats:
@@ -118,24 +96,20 @@ async def vc_logger_watcher():
 
         for chat_id in active_chats:
             try:
-                # 1. Check if Assistant is in the group (Very Important)
+                # Check Assistant Presence
                 try:
                     await userbot.get_chat_member(chat_id, userbot.me.id)
                 except:
-                    print(f"[VC LOGGER] Assistant is NOT in group {chat_id}. Cannot log.")
                     continue
 
-                # 2. Get Data
                 current_ids = await get_vc_participants(userbot, chat_id)
                 previous_ids = VC_PARTICIPANTS_CACHE.get(chat_id, set())
 
-                # 3. Logic
                 joined = current_ids - previous_ids
                 left = previous_ids - current_ids
 
                 VC_PARTICIPANTS_CACHE[chat_id] = current_ids
 
-                # 4. Send Messages
                 if joined:
                     for uid in joined:
                         if uid == userbot.me.id: continue
@@ -148,26 +122,41 @@ async def vc_logger_watcher():
 
             except FloodWait as e:
                 await asyncio.sleep(e.value)
-            except Exception as e:
-                print(f"[VC LOOP ERROR] {e}")
+            except Exception:
+                pass
             
-            await asyncio.sleep(2) # Gap between chats
+            await asyncio.sleep(2)
 
-        await asyncio.sleep(3) # Gap between loops
+        await asyncio.sleep(3)
 
 async def send_log(chat_id, user_id, joined=False, left=False):
     try:
         user = await app.get_users(user_id)
         name = user.first_name or "User"
-        mention = f"[{name}](tg://user?id={user_id})"
+        
+        # FIX: HTML format use kiya hai taaki ajeeb naam wale log bhi mention ho jaye
+        mention = f"<a href='tg://user?id={user_id}'>{name}</a>"
         
         if joined:
-            text = random.choice(JOIN_TEXT).format(user=mention)
-            await app.send_message(chat_id, text)
+            text = JOIN_TEXT.format(user=mention)
+            # Message send karein aur variable mein save karein
+            msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            
+            # 5 Seconds wait phir delete
+            await asyncio.sleep(5)
+            await msg.delete()
+
         if left:
-            text = random.choice(LEFT_TEXT).format(user=mention)
-            await app.send_message(chat_id, text)
-    except:
+            text = LEFT_TEXT.format(user=mention)
+            # Message send karein aur variable mein save karein
+            msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            
+            # 5 Seconds wait phir delete
+            await asyncio.sleep(5)
+            await msg.delete()
+
+    except Exception as e:
+        print(f"Log Error: {e}")
         pass
 
 # ==================== COMMAND HANDLER ====================
@@ -180,9 +169,8 @@ async def vclogger_command(_, message: Message):
         asyncio.create_task(vc_logger_watcher())
 
     chat_id = message.chat.id
-    
-    # Permission Check
     user_id = message.from_user.id if message.from_user else None
+
     if user_id:
         try:
             member = await app.get_chat_member(chat_id, user_id)
@@ -200,7 +188,7 @@ async def vclogger_command(_, message: Message):
     
     if action in ["on", "yes", "enable"]:
         set_vclogger(chat_id, True)
-        return await message.reply_text("✅ **VC Logger Enabled!**\nScanning VC every few seconds...")
+        return await message.reply_text("✅ **VC Logger Enabled!**\nAuto-deleting logs active.")
 
     if action in ["off", "no", "disable"]:
         set_vclogger(chat_id, False)
