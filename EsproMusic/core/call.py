@@ -127,15 +127,30 @@ class Call(PyTgCalls):
         except Exception:
             return None
 
+    # ========== INTERNAL VC WATCHER (FIXED) ==========
+
     async def _fetch_vc_participants(self, assistant, chat_id: int) -> set[int]:
         """
-        phone.getGroupParticipants se current VC participants ka set(user_id) laata hai.[4][5]
+        Fixed: Force refreshes chat to get latest VC participants.
         """
         try:
-            input_call = await self._get_group_call(assistant, chat_id)
-            if not input_call:
+            # Step 1: Force refresh chat info to get valid InputGroupCall
+            # Agar purana cache hoga toh participants nahi milenge
+            chat_peer = await assistant.resolve_peer(chat_id)
+            full_chat = await assistant.invoke(
+                raw.functions.messages.GetFullChat(chat_id=int(f"-100{chat_id}"[4:]))
+            )
+            
+            call = full_chat.full_chat.call
+            if not call:
                 return set()
 
+            input_call = raw.types.InputGroupCall(
+                id=call.id,
+                access_hash=call.access_hash,
+            )
+
+            # Step 2: Get Participants
             resp = await assistant.invoke(
                 raw.functions.phone.GetGroupParticipants(
                     call=input_call,
@@ -152,13 +167,14 @@ class Call(PyTgCalls):
                 if isinstance(peer, raw.types.PeerUser):
                     ids.add(peer.user_id)
             return ids
-        except Exception:
+        except Exception as e:
+            # Error print karein taaki pata chale kyu fail hua
+            # print(f"[VC WATCH ERROR] {chat_id}: {e}")
             return set()
 
     async def _vc_watch_loop(self, chat_id: int):
         """
-        Har chat ke liye background task:
-        raw phone.GetGroupParticipants se VC join/leave track karta hai.[5][4]
+        Fixed loop with error handling
         """
         assistant = await group_assistant(self, chat_id)
         prev_ids = self._vc_last_participants.get(chat_id, set())
@@ -167,13 +183,30 @@ class Call(PyTgCalls):
             try:
                 curr_ids = await self._fetch_vc_participants(assistant, chat_id)
 
+                # Comparision
                 joined = curr_ids - prev_ids
                 left = prev_ids - curr_ids
 
-                for uid in joined:
-                    await process_vc_participant(chat_id, uid, joined=True, left=False)
-                for uid in left:
-                    await process_vc_participant(chat_id, uid, joined=False, left=True)
+                # Logic Call
+                if joined:
+                    for uid in joined:
+                        # Music bot khud ko ignore kare
+                        if uid == assistant.me.id:
+                            continue
+                        try:
+                            await process_vc_participant(chat_id, uid, joined=True, left=False)
+                        except Exception:
+                            pass
+                
+                if left:
+                    for uid in left:
+                        # Music bot khud ko ignore kare
+                        if uid == assistant.me.id:
+                            continue
+                        try:
+                            await process_vc_participant(chat_id, uid, joined=False, left=True)
+                        except Exception:
+                            pass
 
                 prev_ids = curr_ids
                 self._vc_last_participants[chat_id] = curr_ids
@@ -181,31 +214,10 @@ class Call(PyTgCalls):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                print(f"[VC WATCH RAW] error in chat {chat_id}: {e}")
+                print(f"[VC WATCH LOOP] error in chat {chat_id}: {e}")
 
             await asyncio.sleep(VC_WATCH_INTERVAL)
 
-        self._vc_watch_tasks.pop(chat_id, None)
-        self._vc_last_participants.pop(chat_id, None)
-
-    def _ensure_vc_watch(self, chat_id: int):
-        """
-        Agar is chat ke liye watcher nahi chal raha to start karo.
-        """
-        task = self._vc_watch_tasks.get(chat_id)
-        if task and not task.done():
-            return
-        self._vc_watch_tasks[chat_id] = asyncio.create_task(
-            self._vc_watch_loop(chat_id)
-        )
-
-    def _stop_vc_watch(self, chat_id: int):
-        """
-        Is chat ke watcher ko band karo.
-        """
-        task = self._vc_watch_tasks.get(chat_id)
-        if task and not task.done():
-            task.cancel()
         self._vc_watch_tasks.pop(chat_id, None)
         self._vc_last_participants.pop(chat_id, None)
 
