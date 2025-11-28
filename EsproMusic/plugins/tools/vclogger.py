@@ -84,48 +84,52 @@ async def vclogger_command(_, message: Message):
     user_id = message.from_user.id if message.from_user else None
 
     if user_id is None:
-        return
+    return
 
-    # Admin / sudo check
-    try:
-        member = await app.get_chat_member(chat_id, user_id)
-        is_admin = member.status in (
-            ChatMemberStatus.ADMINISTRATOR,
-            ChatMemberStatus.OWNER,
-        )
-    except Exception:
-        is_admin = False
+try:
+    member = await app.get_chat_member(chat_id, user_id)
+    is_admin = member.status in (
+        ChatMemberStatus.ADMINISTRATOR,
+        ChatMemberStatus.OWNER,
+    )
+except Exception:
+    is_admin = False
 
-    if not is_admin and user_id not in SUDOERS:
-        return await message.reply_text("⚠️ ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ.")
+if not is_admin and user_id not in SUDOERS:
+    return await message.reply_text("⚠️ ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ.")
 
-    args = message.text.split(maxsplit=1) if message.text else []
+args = message.text.split(maxsplit=1) if message.text else []
 
-    if len(args) < 2:
-        status = "✅ ᴇɴᴀʙʟᴇᴅ" if is_vclogger_enabled(chat_id) else "❌ ᴅɪsᴀʙʟᴇᴅ"
-        return await message.reply_text(
-            f"**ᴠᴄ ʟᴏɢɢᴇʀ sᴛᴀᴛᴜs:** {status}\n\n"
-            "**ᴜsᴀɢᴇ:**\n"
-            "❍ /vclogger on/off : ᴛᴜʀɴ ᴠᴄ ʟᴏɢɢɪɴɢ ᴏɴ ᴏʀ ᴏғғ.\n"
-            "❍ /vclogger yes/no : ᴇɴᴀʙʟᴇ ᴏʀ ᴅɪsᴀʙʟᴇ ᴛʜᴇ ʟᴏɢɢɪɴɢ.\n"
-            "❍ /vclogger enable/disable : ᴀʟᴛᴇʀɴᴀᴛɪᴠᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ᴍᴀɴᴀɢᴇ ᴠᴄ ʟᴏɢɢᴇʀ."
-        )
+if len(args) < 2:
+    status = "✅ ᴇɴᴀʙʟᴇᴅ" if is_vclogger_enabled(chat_id) else "❌ ᴅɪsᴀʙʟᴇᴅ"
+    return await message.reply_text(
+        f"**ᴠᴄ ʟᴏɢɢᴇʀ sᴛᴀᴛᴜs:** {status}\n\n"
+        "**ᴜsᴀɢᴇ:**\n"
+        "❍ /vclogger on/off : ᴛᴜʀɴ ᴠᴄ ʟᴏɢɢɪɴɢ ᴏɴ ᴏʀ ᴏғғ.\n"
+        "❍ /vclogger yes/no : ᴇɴᴀʙʟᴇ ᴏʀ ᴅɪsᴀʙʟᴇ ᴛʜᴇ ʟᴏɢɢɪɴɢ.\n"
+        "❍ /vclogger enable/disable : ᴀʟᴛᴇʀɴᴀᴛɪᴠᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ᴍᴀɴᴀɢᴇ ᴠᴄ ʟᴏɢɢᴇʀ."
+    )
 
-    action = args.lower().strip()[1]
+action = args.lower().strip()[1]
 
-    if action in ["on", "yes", "enable", "true", "1"]:
-        set_vclogger(chat_id, True)
-        return await message.reply_text(
-            "✅ **ᴠᴄ ʟᴏɢɢᴇʀ ᴇɴᴀʙʟᴇᴅ!**\n\n"
-            "ɪ ɴᴏᴡ ᴀɴɴᴏᴜɴᴄᴇ ᴡʜᴇɴ ᴜsᴇʀs ᴊᴏɪɴ ᴏʀ ʟᴇᴀᴠᴇ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ."
-        )
+if action in ["on", "yes", "enable", "true", "1"]:
+    set_vclogger(chat_id, True)
+    return await message.reply_text(
+        "✅ **ᴠᴄ ʟᴏɢɢᴇʀ ᴇɴᴀʙʟᴇᴅ!**\n\n"
+        "ɪ ɴᴏᴡ ᴀɴɴᴏᴜɴᴄᴇ ᴡʜᴇɴ ᴜsᴇʀs ᴊᴏɪɴ ᴏʀ ʟᴇᴀᴠᴇ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ."
+    )
 
-    if action in ["off", "no", "disable", "false", "0"]:
-        set_vclogger(chat_id, False)
-        return await message.reply_text(
-            "❌ **ᴠᴄ ʟᴏɢɢᴇʀ ᴅɪsᴀʙʟᴇᴅ!**\n\n"
-            "ɪ ᴡɪʟʟ ɴᴏ ʟᴏɴɢᴇʀ ᴀɴɴᴏᴜɴᴄᴇ ᴠᴄ ᴊᴏɪɴs/ʟᴇᴀᴠᴇs."
-        )
+if action in ["off", "no", "disable", "false", "0"]:
+    set_vclogger(chat_id, False)
+    return await message.reply_text(
+        "❌ **ᴠᴄ ʟᴏɢɢᴇʀ ᴅɪsᴀʙʟᴇᴅ!**\n\n"
+        "ɪ ᴡɪʟʟ ɴᴏ ʟᴏɴɢᴇʀ ᴀɴɴᴏᴜɴᴄᴇ ᴠᴄ ᴊᴏɪɴs/ʟᴇᴀᴠᴇs."
+    )
+
+return await message.reply_text(
+    "⚠️ **ɪɴᴠᴀʟɪᴅ ᴀʀɢᴜᴍᴇɴᴛ!**\n\n"
+    "ᴜsᴇ: on/off, yes/no, ᴏʀ enable/disable"
+)
 
     return await message.reply_text(
         "⚠️ **ɪɴᴠᴀʟɪᴅ ᴀʀɢᴜᴍᴇɴᴛ!**\n\n"
