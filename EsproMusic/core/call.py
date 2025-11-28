@@ -38,8 +38,15 @@ from EsproMusic.utils.stream.autoclear import auto_clean
 from EsproMusic.utils.thumbnails import get_thumb
 from strings import get_string
 
+# NEW: import bridge helper from vclogger
+from EsproMusic.plugins.tools.vclogger import process_vc_participant
+
 autoend = {}
 counter = {}
+
+# chat_id -> asyncio.Task (VC watcher)
+vc_watch_tasks = {}
+VC_WATCH_INTERVAL = 3  # seconds
 
 
 async def _clear_(chat_id):
@@ -101,6 +108,71 @@ class Call(PyTgCalls):
             cache_duration=100,
         )
 
+        # chat_id -> set(user_ids) snapshot (assistant side)
+        self._vc_participants = {}
+
+    # ========== INTERNAL VC WATCHER ==========
+
+    async def _vc_watch_loop(self, chat_id: int):
+        """
+        Har chat ke liye background task:
+        assistant.get_participants se poll karke join/leave detect karta hai.
+        Fir vclogger.process_vc_participant ko call karta hai.
+        """
+        prev_ids = set()
+        self._vc_participants[chat_id] = set()
+
+        while True:
+            try:
+                assistant = await group_assistant(self, chat_id)
+                try:
+                    plist = await assistant.get_participants(chat_id)
+                    curr_ids = {p.user_id for p in plist}
+                except Exception:
+                    curr_ids = set()
+
+                joined = curr_ids - prev_ids
+                left = prev_ids - curr_ids
+
+                for uid in joined:
+                    await process_vc_participant(chat_id, uid, joined=True, left=False)
+                for uid in left:
+                    await process_vc_participant(chat_id, uid, joined=False, left=True)
+
+                prev_ids = curr_ids
+                self._vc_participants[chat_id] = curr_ids
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[VC WATCH] error in chat {chat_id}: {e}")
+
+            await asyncio.sleep(VC_WATCH_INTERVAL)
+
+        # cleanup
+        self._vc_participants.pop(chat_id, None)
+        vc_watch_tasks.pop(chat_id, None)
+
+    def _ensure_vc_watch(self, chat_id: int):
+        """
+        Agar is chat ke liye watcher nahi chal raha to start karo.
+        """
+        if chat_id in vc_watch_tasks and not vc_watch_tasks[chat_id].done():
+            return
+        vc_watch_tasks[chat_id] = asyncio.create_task(self._vc_watch_loop(chat_id))
+
+    def _stop_vc_watch(self, chat_id: int):
+        """
+        Is chat ke watcher ko band karo.
+        """
+        task = vc_watch_tasks.get(chat_id)
+        if task and not task.done():
+            task.cancel()
+        vc_watch_tasks.pop(chat_id, None)
+        self._vc_participants.pop(chat_id, None)
+
+    # ========== NORMAL METHODS (UNCHANGED) ==========
+
     async def pause_stream(self, chat_id: int):
         assistant = await group_assistant(self, chat_id)
         await assistant.pause_stream(chat_id)
@@ -116,6 +188,8 @@ class Call(PyTgCalls):
             await assistant.leave_group_call(chat_id)
         except:
             pass
+        # VC watch band karo
+        self._stop_vc_watch(chat_id)
 
     async def stop_stream_force(self, chat_id: int):
         try:
@@ -147,6 +221,8 @@ class Call(PyTgCalls):
             await _clear_(chat_id)
         except:
             pass
+        # VC watch band karo
+        self._stop_vc_watch(chat_id)
 
     async def speedup_stream(self, chat_id: int, file_path, speed, playing):
         assistant = await group_assistant(self, chat_id)
@@ -230,6 +306,8 @@ class Call(PyTgCalls):
             await assistant.leave_group_call(chat_id)
         except:
             pass
+        # VC watch band karo
+        self._stop_vc_watch(chat_id)
 
     async def skip_stream(
         self,
@@ -329,6 +407,9 @@ class Call(PyTgCalls):
             if users == 1:
                 autoend[chat_id] = datetime.now() + timedelta(minutes=1)
 
+        # NEW: VC watcher ensure karo (music join hone ke baad)
+        self._ensure_vc_watch(chat_id)
+
     async def change_stream(self, client, chat_id):
         check = db.get(chat_id)
         popped = None
@@ -353,7 +434,7 @@ class Call(PyTgCalls):
             queued = check[0]["file"]
             language = await get_lang(chat_id)
             _ = get_string(language)
-            title = (check[0]["title"]).title()
+            title = (check[chat_id][0]["title"]).title()
             user = check[0]["by"]
             original_chat_id = check[0]["chat_id"]
             streamtype = check[0]["streamtype"]
