@@ -8,7 +8,7 @@ from pyrogram.errors import FloodWait
 from EsproMusic import app
 from EsproMusic.misc import SUDOERS
 
-# Ab hum safe hain kyunki call.py humein import nahi kar raha
+# Hum Ritik object se Userbot client lenge
 from EsproMusic.core.call import Ritik 
 
 # ==================== CONFIG ====================
@@ -28,10 +28,10 @@ LEFT_TEXT = [
 # Database: chat_id -> True/False
 VC_LOGGER_DB: dict[int, bool] = {}
 
-# Cache: chat_id -> Set of user_ids (Pichli baar kaun tha)
+# Cache: chat_id -> Set of user_ids
 VC_PARTICIPANTS_CACHE: dict[int, set] = {}
 
-# Loop status
+# Loop control
 LOOP_STARTED = False
 
 # ==================== STATE HELPERS ====================
@@ -44,33 +44,37 @@ def set_vclogger(chat_id: int, enabled: bool) -> None:
     if not enabled:
         VC_PARTICIPANTS_CACHE.pop(chat_id, None)
 
-# ==================== RAW API FETCH (POWERFUL) ====================
+# ==================== POWERFUL RAW API FETCHER ====================
 
 async def get_vc_participants(userbot: Client, chat_id: int) -> set:
-    """
-    Raw Telegram API use karke accurate list nikalta hai.
-    """
     try:
-        # 1. Chat Peer Resolve karo
-        # "-100" hata kar integer handle karna safe rehta hai raw calls ke liye
+        # 1. Peer Resolve karo (Supergroup/Channel handle karne ke liye)
         peer = await userbot.resolve_peer(chat_id)
         
-        # 2. Full Chat Info nikalo (Call ID ke liye)
-        full_chat = await userbot.invoke(
-            raw.functions.messages.GetFullChat(chat_id=int(str(chat_id).replace("-100", "")))
-        )
+        # 2. Full Chat Info nikalo
+        # Note: Supergroups ke liye channels.GetFullChannel lagta hai
+        try:
+            full_chat = await userbot.invoke(
+                raw.functions.channels.GetFullChannel(channel=peer)
+            )
+        except:
+            # Agar basic group hai to fallback
+            full_chat = await userbot.invoke(
+                raw.functions.messages.GetFullChat(chat_id=int(str(chat_id).replace("-100", "")))
+            )
         
+        # 3. Check karo Call active hai ya nahi
         call = full_chat.full_chat.call
         if not call:
-            return set() # VC Active nahi hai
+            return set()
 
-        # 3. InputGroupCall object banao
+        # 4. InputGroupCall object banao
         input_call = raw.types.InputGroupCall(
             id=call.id,
             access_hash=call.access_hash,
         )
 
-        # 4. Participants fetch karo
+        # 5. Participants fetch karo
         participants_result = await userbot.invoke(
             raw.functions.phone.GetGroupParticipants(
                 call=input_call,
@@ -81,7 +85,7 @@ async def get_vc_participants(userbot: Client, chat_id: int) -> set:
             )
         )
 
-        # 5. User IDs ka Set banao
+        # 6. IDs extract karo
         user_ids = set()
         for participant in participants_result.participants:
             peer_info = participant.peer
@@ -90,22 +94,22 @@ async def get_vc_participants(userbot: Client, chat_id: int) -> set:
         
         return user_ids
 
-    except Exception:
-        # Agar koi error aaye (jaise userbot admin nahi hai, ya floodwait)
+    except Exception as e:
+        print(f"[VC ERROR] Chat: {chat_id} | Error: {e}")
         return set()
 
-# ==================== BACKGROUND LOOP ====================
+# ==================== BACKGROUND WATCHER LOOP ====================
 
 async def vc_logger_watcher():
     global LOOP_STARTED
-    print("[VC LOGGER] Waiting for Userbot to start...")
-    await asyncio.sleep(10) # 10 sec wait karo taaki bot puri tarah start ho jaye
-    print("[VC LOGGER] Watcher Loop Started! 🟢")
-    
-    userbot = Ritik.userbot1 # Assistant client
+    print("[VC LOGGER] Waiting 10s for Userbot initialization...")
+    await asyncio.sleep(10)
+    print("[VC LOGGER] Loop Started! 🟢")
+
+    userbot = Ritik.userbot1
 
     while True:
-        # Sirf enabled chats uthao
+        # Get enabled chats
         active_chats = [chat_id for chat_id, enabled in VC_LOGGER_DB.items() if enabled]
 
         if not active_chats:
@@ -114,19 +118,24 @@ async def vc_logger_watcher():
 
         for chat_id in active_chats:
             try:
-                # Naya List layo
+                # 1. Check if Assistant is in the group (Very Important)
+                try:
+                    await userbot.get_chat_member(chat_id, userbot.me.id)
+                except:
+                    print(f"[VC LOGGER] Assistant is NOT in group {chat_id}. Cannot log.")
+                    continue
+
+                # 2. Get Data
                 current_ids = await get_vc_participants(userbot, chat_id)
-                # Purana List layo
                 previous_ids = VC_PARTICIPANTS_CACHE.get(chat_id, set())
 
-                # Compare
+                # 3. Logic
                 joined = current_ids - previous_ids
                 left = previous_ids - current_ids
 
-                # Cache Update
                 VC_PARTICIPANTS_CACHE[chat_id] = current_ids
 
-                # Notification Bhejo
+                # 4. Send Messages
                 if joined:
                     for uid in joined:
                         if uid == userbot.me.id: continue
@@ -139,12 +148,12 @@ async def vc_logger_watcher():
 
             except FloodWait as e:
                 await asyncio.sleep(e.value)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[VC LOOP ERROR] {e}")
             
-            await asyncio.sleep(1) # Har chat ke beech thoda gap
+            await asyncio.sleep(2) # Gap between chats
 
-        await asyncio.sleep(3) # Ek round ke baad gap
+        await asyncio.sleep(3) # Gap between loops
 
 async def send_log(chat_id, user_id, joined=False, left=False):
     try:
@@ -165,15 +174,15 @@ async def send_log(chat_id, user_id, joined=False, left=False):
 
 @app.on_message(filters.command(["vclogger", "vclog"]) & filters.group)
 async def vclogger_command(_, message: Message):
-    # Command use karte hi loop start karne ki koshish karein
     global LOOP_STARTED
     if not LOOP_STARTED:
         LOOP_STARTED = True
         asyncio.create_task(vc_logger_watcher())
 
     chat_id = message.chat.id
+    
+    # Permission Check
     user_id = message.from_user.id if message.from_user else None
-
     if user_id:
         try:
             member = await app.get_chat_member(chat_id, user_id)
@@ -191,7 +200,7 @@ async def vclogger_command(_, message: Message):
     
     if action in ["on", "yes", "enable"]:
         set_vclogger(chat_id, True)
-        return await message.reply_text("✅ **VC Logger Enabled!**\nLoop is running.")
+        return await message.reply_text("✅ **VC Logger Enabled!**\nScanning VC every few seconds...")
 
     if action in ["off", "no", "disable"]:
         set_vclogger(chat_id, False)
