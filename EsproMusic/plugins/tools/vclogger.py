@@ -13,7 +13,7 @@ from EsproMusic.core.call import Ritik
 
 # ==================== CONFIG (CUTE AESTHETIC THEME) ====================
 
-# === RANDOM JOIN MESSAGES (Love & Cute Vibe) ===
+# === RANDOM JOIN MESSAGES ===
 JOIN_TEXTS = [
     "{user} ✨ ɪs ʜᴇʀᴇ! ᴛʜᴇ ᴠɪʙᴇ ᴊᴜsᴛ ɢᴏᴛ ʙᴇᴛᴛᴇʀ 🌸",
     "🎀 ᴡᴇʟᴄᴏᴍᴇ {user}! ɢʀᴀʙ ᴀ sᴇᴀᴛ ᴀɴᴅ ʀᴇʟᴀx 🧸",
@@ -25,7 +25,7 @@ JOIN_TEXTS = [
     "🐣 ʟᴏᴏᴋ ᴡʜᴏ's ʜᴇʀᴇ! ɪᴛ's {user}! ᴡᴇʟᴄᴏᴍᴇ ᴄᴜᴛɪᴇ! ✨"
 ]
 
-# === RANDOM LEAVE MESSAGES (Sad & Cute Vibe) ===
+# === RANDOM LEAVE MESSAGES ===
 LEFT_TEXTS = [
     "{user} ☁️ ʟᴇғᴛ... ᴍɪssɪɴɢ ʏᴏᴜ ᴀʟʀᴇᴀᴅʏ 💔",
     "🧸 {user} ᴡᴇɴᴛ ᴀᴡᴀʏ... ᴄᴏᴍᴇ ʙᴀᴄᴋ sᴏᴏɴ ᴘʟᴇᴀsᴇ! 🌸",
@@ -35,6 +35,18 @@ LEFT_TEXTS = [
     "🍃 {user} sᴛᴇᴘᴘᴇᴅ ᴏᴜᴛ. ᴅᴏɴ'ᴛ ʙᴇ ʟᴀᴛᴇ ɴᴇxᴛ ᴛɪᴍᴇ! 🕰️",
     "🐇 {user} ʙᴏᴜɴᴄᴇᴅ ᴏᴜᴛ! ᴄᴀᴛᴄʜ ʏᴏᴜ ʟᴀᴛᴇʀ! 🥕",
     "🦋 ʙʏᴇ ʙʏᴇ {user}! ʜᴀᴠᴇ ᴀ ʟᴏᴠᴇʟʏ ᴅᴀʏ! 💖"
+]
+
+# === RANDOM INVITE MESSAGES (New) ===
+INVITE_TEXTS = [
+    "💘 {inviter} ɪɴᴠɪᴛᴇᴅ {invitee}! ᴄᴏᴍᴇ ᴊᴏɪɴ ᴛʜᴇ ғᴜɴ! 🌸",
+    "👀 {inviter} ɪs ᴅʀᴀɢɢɪɴɢ {invitee} ᴛᴏ ᴛʜᴇ ᴠᴄ! 🤭",
+    "🌙 {inviter} ᴡᴀɴᴛs {invitee} ʜᴇʀᴇ! ᴅᴏɴ'ᴛ ʙᴇ sʜʏ! ✨",
+    "🧸 {inviter} ᴍɪssᴇᴅ {invitee} sᴏ ᴍᴜᴄʜ! ᴊᴏɪɴ ғᴀsᴛ! 🎀",
+    "🍬 {invitee}, ʏᴏᴜ ɢᴏᴛ ᴀɴ ɪɴᴠɪᴛᴇ ғʀᴏᴍ {inviter}! ʜᴏᴘ ɪɴ! 🍓",
+    "😻 ᴏᴍɢ! {inviter} ɪs ᴄᴀʟʟɪɴɢ {invitee}! ᴄᴜᴛɪᴇs ᴜɴɪᴛᴇ! 💜",
+    "🎧 {inviter} ➡ {invitee}: ᴄᴏᴍᴇ ʟɪsᴛᴇɴ ᴛᴏ ᴍᴜsɪᴄ ᴡɪᴛʜ ᴜs! 🎶",
+    "🦋 {inviter} sᴜᴍᴍᴏɴᴇᴅ {invitee}! ᴍᴀɢɪᴄ ɪs ʜᴀᴘᴘᴇɴɪɴɢ! 💫"
 ]
 
 # Database & Cache
@@ -97,7 +109,7 @@ async def get_vc_participants(userbot: Client, chat_id: int) -> set:
     except Exception:
         return set()
 
-# ==================== BACKGROUND WATCHER ====================
+# ==================== BACKGROUND WATCHER LOOP ====================
 
 async def vc_logger_watcher():
     global LOOP_STARTED
@@ -152,8 +164,6 @@ async def send_log(chat_id, user_id, joined=False, left=False):
     try:
         user = await app.get_users(user_id)
         name = user.first_name or "Cutie"
-        
-        # HTML Mention Safe Format
         mention = f"<a href='tg://user?id={user_id}'>{name}</a>"
         
         if joined:
@@ -170,6 +180,42 @@ async def send_log(chat_id, user_id, joined=False, left=False):
 
     except Exception:
         pass
+
+# ==================== INVITE HANDLER (NEW FEATURE) ====================
+
+@app.on_message(filters.video_chat_members_invited)
+async def vc_invite_handler(_, message: Message):
+    # Check if logger is enabled
+    chat_id = message.chat.id
+    if not is_vclogger_enabled(chat_id):
+        return
+
+    try:
+        # 1. Get Inviter (Jo bula raha hai)
+        inviter_id = message.from_user.id
+        inviter_name = message.from_user.first_name or "User"
+        inviter_mention = f"<a href='tg://user?id={inviter_id}'>{inviter_name}</a>"
+
+        # 2. Get Invited Users (Jinko bulaya gaya hai)
+        invited_users = message.video_chat_members_invited.users
+        
+        for user in invited_users:
+            invitee_id = user.id
+            invitee_name = user.first_name or "Cutie"
+            invitee_mention = f"<a href='tg://user?id={invitee_id}'>{invitee_name}</a>"
+
+            # 3. Send Aesthetic Message
+            text = random.choice(INVITE_TEXTS).format(inviter=inviter_mention, invitee=invitee_mention)
+            msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+
+            # 4. Auto Delete after 5 seconds
+            await asyncio.sleep(5)
+            await msg.delete()
+
+    except Exception as e:
+        print(f"Invite Log Error: {e}")
+        pass
+
 
 # ==================== COMMAND HANDLER ====================
 
