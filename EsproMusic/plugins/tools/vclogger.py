@@ -11,9 +11,9 @@ from EsproMusic.misc import SUDOERS
 # Ritik object se hum Userbot client lenge
 from EsproMusic.core.call import Ritik 
 
-# ==================== CONFIG (CUTE AESTHETIC THEME) ====================
+# ==================== CONFIG (AESTHETIC & FUN THEME) ====================
 
-# === RANDOM JOIN MESSAGES ===
+# === JOIN MESSAGES (Delete after 20s) ===
 JOIN_TEXTS = [
     "{user} ✨ ɪs ʜᴇʀᴇ! ᴛʜᴇ ᴠɪʙᴇ ᴊᴜsᴛ ɢᴏᴛ ʙᴇᴛᴛᴇʀ 🌸",
     "🎀 ᴡᴇʟᴄᴏᴍᴇ {user}! ɢʀᴀʙ ᴀ sᴇᴀᴛ ᴀɴᴅ ʀᴇʟᴀx 🧸",
@@ -25,7 +25,7 @@ JOIN_TEXTS = [
     "🐣 ʟᴏᴏᴋ ᴡʜᴏ's ʜᴇʀᴇ! ɪᴛ's {user}! ᴡᴇʟᴄᴏᴍᴇ ᴄᴜᴛɪᴇ! ✨"
 ]
 
-# === RANDOM LEAVE MESSAGES ===
+# === LEAVE MESSAGES (Delete after 20s) ===
 LEFT_TEXTS = [
     "{user} ☁️ ʟᴇғᴛ... ᴍɪssɪɴɢ ʏᴏᴜ ᴀʟʀᴇᴀᴅʏ 💔",
     "🧸 {user} ᴡᴇɴᴛ ᴀᴡᴀʏ... ᴄᴏᴍᴇ ʙᴀᴄᴋ sᴏᴏɴ ᴘʟᴇᴀsᴇ! 🌸",
@@ -37,7 +37,7 @@ LEFT_TEXTS = [
     "🦋 ʙʏᴇ ʙʏᴇ {user}! ʜᴀᴠᴇ ᴀ ʟᴏᴠᴇʟʏ ᴅᴀʏ! 💖"
 ]
 
-# === RANDOM INVITE MESSAGES (New) ===
+# === INVITE MESSAGES (Permanent - No Delete) ===
 INVITE_TEXTS = [
     "💘 {inviter} ɪɴᴠɪᴛᴇᴅ {invitee}! ᴄᴏᴍᴇ ᴊᴏɪɴ ᴛʜᴇ ғᴜɴ! 🌸",
     "👀 {inviter} ɪs ᴅʀᴀɢɢɪɴɢ {invitee} ᴛᴏ ᴛʜᴇ ᴠᴄ! 🤭",
@@ -47,6 +47,22 @@ INVITE_TEXTS = [
     "😻 ᴏᴍɢ! {inviter} ɪs ᴄᴀʟʟɪɴɢ {invitee}! ᴄᴜᴛɪᴇs ᴜɴɪᴛᴇ! 💜",
     "🎧 {inviter} ➡ {invitee}: ᴄᴏᴍᴇ ʟɪsᴛᴇɴ ᴛᴏ ᴍᴜsɪᴄ ᴡɪᴛʜ ᴜs! 🎶",
     "🦋 {inviter} sᴜᴍᴍᴏɴᴇᴅ {invitee}! ᴍᴀɢɪᴄ ɪs ʜᴀᴘᴘᴇɴɪɴɢ! 💫"
+]
+
+# === VC START MESSAGES (Permanent) ===
+VC_START_TEXTS = [
+    "🤩 **ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ ɪs ᴏᴘᴇɴ!**\nᴊᴏɪɴ ɴᴏᴡ ᴀɴᴅ ʟᴇᴛ's ᴍᴀᴋᴇ ɴᴏɪsᴇ! 🥳",
+    "🔥 **ᴠᴄ sᴛᴀʀᴛᴇᴅ!**\nᴅᴏɴ'ᴛ ʙᴇ sʜʏ, ᴄᴏᴍᴇ sᴀʏ ʜɪ! 🎙️",
+    "🎶 **ᴍᴜsɪᴄ ᴛɪᴍᴇ!**\nᴛʜᴇ ᴠᴄ ɪs ʟɪᴠᴇ, ʜᴏᴘ ɪɴ ᴄᴜᴛɪᴇs! 🍓",
+    "🚀 **ʟɪғᴛ ᴏғғ!**\nᴠᴏɪᴄᴇ ᴄʜᴀᴛ ʜᴀs sᴛᴀʀᴛᴇᴅ! ᴊᴏɪɴ ғᴀsᴛ! ✨"
+]
+
+# === VC END MESSAGES (Permanent) ===
+VC_END_TEXTS = [
+    "💔 **ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ ʜᴀs ᴇɴᴅᴇᴅ!**\nᴛʜᴀɴᴋs ғᴏʀ ᴊᴏɪɴɪɴɢ, sᴇᴇ ʏᴀ sᴏᴏɴ! 🌙",
+    "🏁 **ᴠᴄ ᴄʟᴏsᴇᴅ!**\nʜᴏᴘᴇ ʏᴏᴜ ʜᴀᴅ ғᴜɴ! ʙʏᴇ ʙʏᴇ! 👋",
+    "😴 **sʜʜʜ... ɪᴛ's ᴏᴠᴇʀ!**\nᴠᴄ ɪs ᴏғғ ɴᴏᴡ. sʟᴇᴇᴘ ᴡᴇʟʟ! 🧸",
+    "🥀 **ᴛʜᴇ ᴘᴀʀᴛʏ ɪs ᴏᴠᴇʀ.**\nᴜɴᴛɪʟ ɴᴇxᴛ ᴛɪᴍᴇ! sᴛᴀʏ ʜᴀᴘᴘʏ! 🌸"
 ]
 
 # Database & Cache
@@ -115,7 +131,7 @@ async def vc_logger_watcher():
     global LOOP_STARTED
     print("[VC LOGGER] Waiting 10s for Userbot initialization... 🌸")
     await asyncio.sleep(10)
-    print("[VC LOGGER] Cute Watcher Loop Started! 🧸")
+    print("[VC LOGGER] Fun Watcher Loop Started! 🧸")
 
     userbot = Ritik.userbot1
 
@@ -169,34 +185,56 @@ async def send_log(chat_id, user_id, joined=False, left=False):
         if joined:
             text = random.choice(JOIN_TEXTS).format(user=mention)
             msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
-            await asyncio.sleep(5)
+            
+            # Update: 20 Seconds Timer
+            await asyncio.sleep(20)
             await msg.delete()
 
         if left:
             text = random.choice(LEFT_TEXTS).format(user=mention)
             msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
-            await asyncio.sleep(5)
+            
+            # Update: 20 Seconds Timer
+            await asyncio.sleep(20)
             await msg.delete()
 
     except Exception:
         pass
 
-# ==================== INVITE HANDLER (NEW FEATURE) ====================
+# ==================== SPECIAL HANDLERS ====================
 
+# 1. VC STARTED HANDLER
+@app.on_message(filters.video_chat_started)
+async def vc_start_handler(_, message: Message):
+    chat_id = message.chat.id
+    if not is_vclogger_enabled(chat_id):
+        return
+    
+    text = random.choice(VC_START_TEXTS)
+    await app.send_message(chat_id, text)
+
+# 2. VC ENDED HANDLER
+@app.on_message(filters.video_chat_ended)
+async def vc_end_handler(_, message: Message):
+    chat_id = message.chat.id
+    if not is_vclogger_enabled(chat_id):
+        return
+    
+    text = random.choice(VC_END_TEXTS)
+    await app.send_message(chat_id, text)
+
+# 3. INVITE HANDLER (No Delete)
 @app.on_message(filters.video_chat_members_invited)
 async def vc_invite_handler(_, message: Message):
-    # Check if logger is enabled
     chat_id = message.chat.id
     if not is_vclogger_enabled(chat_id):
         return
 
     try:
-        # 1. Get Inviter (Jo bula raha hai)
         inviter_id = message.from_user.id
         inviter_name = message.from_user.first_name or "User"
         inviter_mention = f"<a href='tg://user?id={inviter_id}'>{inviter_name}</a>"
 
-        # 2. Get Invited Users (Jinko bulaya gaya hai)
         invited_users = message.video_chat_members_invited.users
         
         for user in invited_users:
@@ -204,16 +242,12 @@ async def vc_invite_handler(_, message: Message):
             invitee_name = user.first_name or "Cutie"
             invitee_mention = f"<a href='tg://user?id={invitee_id}'>{invitee_name}</a>"
 
-            # 3. Send Aesthetic Message
             text = random.choice(INVITE_TEXTS).format(inviter=inviter_mention, invitee=invitee_mention)
-            msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
+            
+            # Sent without delete timer (Permanent)
+            await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
 
-            # 4. Auto Delete after 5 seconds
-            await asyncio.sleep(5)
-            await msg.delete()
-
-    except Exception as e:
-        print(f"Invite Log Error: {e}")
+    except Exception:
         pass
 
 
