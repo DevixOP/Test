@@ -1,6 +1,6 @@
 import asyncio
 import random
-from pyrogram import filters, Client, raw, enums
+from pyrogram import filters, Client, raw
 from pyrogram.types import Message
 from pyrogram.enums import ChatMemberStatus, ParseMode
 from pyrogram.errors import FloodWait
@@ -11,11 +11,31 @@ from EsproMusic.misc import SUDOERS
 # Ritik object se hum Userbot client lenge
 from EsproMusic.core.call import Ritik 
 
-# ==================== CONFIG ====================
+# ==================== CONFIG (CUTE AESTHETIC THEME) ====================
 
-# Aapke naye messages
-JOIN_TEXT = "{user} ✨  ɪs ɴᴏᴡ ɪɴ ᴛʜᴇ ᴠᴄ – ᴡᴇʟᴄᴏᴍᴇ ᴀʙᴏᴀʀᴅ! 💫"
-LEFT_TEXT = "{user} ✌️  sᴀɪᴅ ɢᴏᴏᴅʙʏᴇ – ᴄᴏᴍᴇ ʙᴀᴄᴋ ᴀɴᴅ ᴊᴏɪɴ ᴛʜᴇ ғᴜɴ ᴀɢᴀɪɴ! 🎶"
+# === RANDOM JOIN MESSAGES (Love & Cute Vibe) ===
+JOIN_TEXTS = [
+    "{user} ✨ ɪs ʜᴇʀᴇ! ᴛʜᴇ ᴠɪʙᴇ ᴊᴜsᴛ ɢᴏᴛ ʙᴇᴛᴛᴇʀ 🌸",
+    "🎀 ᴡᴇʟᴄᴏᴍᴇ {user}! ɢʀᴀʙ ᴀ sᴇᴀᴛ ᴀɴᴅ ʀᴇʟᴀx 🧸",
+    "🍓 {user} ʜᴀs ᴀʀʀɪᴠᴇᴅ! ʟᴇᴛ's ᴍᴀᴋᴇ ᴍᴇᴍᴏʀɪᴇs ☁️",
+    "😻 ᴏᴍɢ! {user} ᴊᴏɪɴᴇᴅ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ! ʜɪɪɪ! 💜",
+    "🦋 ʜᴇʏ {user}! sᴏ ʜᴀᴘᴘʏ ᴛᴏ sᴇᴇ ʏᴏᴜ ʜᴇʀᴇ! 💫",
+    "🍭 {user} ɪs ɴᴏᴡ ᴄᴏɴɴᴇᴄᴛᴇᴅ! sᴡᴇᴇᴛ ᴠɪʙᴇs ᴏɴʟʏ 🍬",
+    "🎧 {user} ʜᴏᴘᴘᴇᴅ ɪɴ! ʟᴇᴛ's ʟɪsᴛᴇɴ ᴛᴏɢᴇᴛʜᴇʀ 🎶",
+    "🐣 ʟᴏᴏᴋ ᴡʜᴏ's ʜᴇʀᴇ! ɪᴛ's {user}! ᴡᴇʟᴄᴏᴍᴇ ᴄᴜᴛɪᴇ! ✨"
+]
+
+# === RANDOM LEAVE MESSAGES (Sad & Cute Vibe) ===
+LEFT_TEXTS = [
+    "{user} ☁️ ʟᴇғᴛ... ᴍɪssɪɴɢ ʏᴏᴜ ᴀʟʀᴇᴀᴅʏ 💔",
+    "🧸 {user} ᴡᴇɴᴛ ᴀᴡᴀʏ... ᴄᴏᴍᴇ ʙᴀᴄᴋ sᴏᴏɴ ᴘʟᴇᴀsᴇ! 🌸",
+    "🫧 {user} ᴅɪsᴄᴏɴɴᴇᴄᴛᴇᴅ. sᴇᴇ ʏᴏᴜ ʟᴀᴛᴇʀ ʙᴇsᴛɪᴇ! 👋",
+    "🌙 ɢᴏᴏᴅʙʏᴇ {user}! sᴛᴀʏ sᴀғᴇ ᴀɴᴅ ʜᴀᴘᴘʏ ✨",
+    "🥀 {user} ʟᴇғᴛ ᴛʜᴇ ᴄʜᴀᴛ... sᴀᴅ ᴍᴏᴍᴇɴᴛs 😿",
+    "🍃 {user} sᴛᴇᴘᴘᴇᴅ ᴏᴜᴛ. ᴅᴏɴ'ᴛ ʙᴇ ʟᴀᴛᴇ ɴᴇxᴛ ᴛɪᴍᴇ! 🕰️",
+    "🐇 {user} ʙᴏᴜɴᴄᴇᴅ ᴏᴜᴛ! ᴄᴀᴛᴄʜ ʏᴏᴜ ʟᴀᴛᴇʀ! 🥕",
+    "🦋 ʙʏᴇ ʙʏᴇ {user}! ʜᴀᴠᴇ ᴀ ʟᴏᴠᴇʟʏ ᴅᴀʏ! 💖"
+]
 
 # Database & Cache
 VC_LOGGER_DB: dict[int, bool] = {}
@@ -81,9 +101,9 @@ async def get_vc_participants(userbot: Client, chat_id: int) -> set:
 
 async def vc_logger_watcher():
     global LOOP_STARTED
-    print("[VC LOGGER] Waiting 10s for Userbot initialization...")
+    print("[VC LOGGER] Waiting 10s for Userbot initialization... 🌸")
     await asyncio.sleep(10)
-    print("[VC LOGGER] Loop Started! 🟢")
+    print("[VC LOGGER] Cute Watcher Loop Started! 🧸")
 
     userbot = Ritik.userbot1
 
@@ -96,7 +116,6 @@ async def vc_logger_watcher():
 
         for chat_id in active_chats:
             try:
-                # Check Assistant Presence
                 try:
                     await userbot.get_chat_member(chat_id, userbot.me.id)
                 except:
@@ -132,31 +151,24 @@ async def vc_logger_watcher():
 async def send_log(chat_id, user_id, joined=False, left=False):
     try:
         user = await app.get_users(user_id)
-        name = user.first_name or "User"
+        name = user.first_name or "Cutie"
         
-        # FIX: HTML format use kiya hai taaki ajeeb naam wale log bhi mention ho jaye
+        # HTML Mention Safe Format
         mention = f"<a href='tg://user?id={user_id}'>{name}</a>"
         
         if joined:
-            text = JOIN_TEXT.format(user=mention)
-            # Message send karein aur variable mein save karein
+            text = random.choice(JOIN_TEXTS).format(user=mention)
             msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
-            
-            # 5 Seconds wait phir delete
             await asyncio.sleep(5)
             await msg.delete()
 
         if left:
-            text = LEFT_TEXT.format(user=mention)
-            # Message send karein aur variable mein save karein
+            text = random.choice(LEFT_TEXTS).format(user=mention)
             msg = await app.send_message(chat_id, text, parse_mode=ParseMode.HTML)
-            
-            # 5 Seconds wait phir delete
             await asyncio.sleep(5)
             await msg.delete()
 
-    except Exception as e:
-        print(f"Log Error: {e}")
+    except Exception:
         pass
 
 # ==================== COMMAND HANDLER ====================
@@ -175,23 +187,28 @@ async def vclogger_command(_, message: Message):
         try:
             member = await app.get_chat_member(chat_id, user_id)
             if member.status not in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER) and user_id not in SUDOERS:
-                return await message.reply_text("⚠️ Only Admins can use this.")
+                return await message.reply_text("🥺 **sᴏʀʀʏ ʙᴀʙʏ, ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴜsᴇ ᴛʜɪs!** ✋🚫")
         except:
             return
 
     args = message.text.split(maxsplit=1)
     if len(args) < 2:
-        status = "✅ ENABLED" if is_vclogger_enabled(chat_id) else "❌ DISABLED"
-        return await message.reply_text(f"**VC Logger Status:** {status}\nUsage: /vclogger on | off")
+        status = "✨ ᴇɴᴀʙʟᴇᴅ" if is_vclogger_enabled(chat_id) else "☁️ ᴅɪsᴀʙʟᴇᴅ"
+        return await message.reply_text(
+            f"🌸 **ᴠᴄ ʟᴏɢɢᴇʀ sᴛᴀᴛᴜs:** {status}\n\n"
+            "🌷 **ᴜsᴀɢᴇ:**\n"
+            "» `/vclogger on` : ᴛᴜʀɴ ɪᴛ ᴏɴ 🧸\n"
+            "» `/vclogger off` : ᴛᴜʀɴ ɪᴛ ᴏғғ 💔"
+        )
 
     action = args[1].lower().strip()
     
     if action in ["on", "yes", "enable"]:
         set_vclogger(chat_id, True)
-        return await message.reply_text("✅ **VC Logger Enabled!**\nAuto-deleting logs active.")
+        return await message.reply_text("✨ **ʏᴀʏ! ᴠᴄ ʟᴏɢɢᴇʀ ɪs ɴᴏᴡ ᴏɴ!** 🍓\nɪ'ʟʟ ᴛᴇʟʟ ʏᴏᴜ ᴡʜᴇɴ sᴏᴍᴇᴏɴᴇ ᴄᴏᴍᴇs! 🦋")
 
     if action in ["off", "no", "disable"]:
         set_vclogger(chat_id, False)
-        return await message.reply_text("❌ **VC Logger Disabled!**")
+        return await message.reply_text("💔 **ᴠᴄ ʟᴏɢɢᴇʀ ɪs ɴᴏᴡ ᴏғғ!** ☁️\nɴᴏ ᴍᴏʀᴇ ɴᴏᴛɪғɪᴄᴀᴛɪᴏɴs, sɪʟᴇɴᴄᴇ... 🤫")
 
-    return await message.reply_text("⚠️ Invalid argument.")
+    return await message.reply_text("🥺 **ᴏᴏᴘs! ᴡʀᴏɴɢ ᴄᴏᴍᴍᴀɴᴅ!**\nᴘʟᴇᴀsᴇ ᴜsᴇ `on` ᴏʀ `off` ʙᴀʙʏ! 🧸")
