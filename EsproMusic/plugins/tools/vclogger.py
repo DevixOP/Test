@@ -21,7 +21,7 @@ LEFT_TEXT = [
 ]
 
 # Per-chat VC logger state: chat_id -> bool
-VC_LOGGER_DB = {}
+VC_LOGGER_DB: dict[int, bool] = {}
 
 
 # ==================== STATE HELPERS ====================
@@ -31,16 +31,21 @@ def is_vclogger_enabled(chat_id: int) -> bool:
     return VC_LOGGER_DB.get(chat_id, False)
 
 
-def set_vclogger(chat_id: int, enabled: bool):
+def set_vclogger(chat_id: int, enabled: bool) -> None:
     """Enable or disable VC logger for a chat."""
     VC_LOGGER_DB[chat_id] = enabled
 
 
 # ==================== ASSISTANT → BOT BRIDGE ====================
 
-async def process_vc_participant(chat_id: int, user_id: int, joined: bool = False, left: bool = False):
+async def process_vc_participant(
+    chat_id: int,
+    user_id: int,
+    joined: bool = False,
+    left: bool = False
+) -> None:
     """
-    Isko assistants call karenge jab koi VC join/leave karega.
+    Isko assistant(s) call karenge jab koi VC join/leave karega.
     Yaha se message bot (app) se jayega.
     """
     if not is_vclogger_enabled(chat_id):
@@ -72,18 +77,25 @@ async def vclogger_command(_, message: Message):
     Usage: /vclogger on|off|yes|no|enable|disable
     """
     chat_id = message.chat.id
+    user_id = message.from_user.id if message.from_user else None
+
+    if user_id is None:
+        return
 
     # Admin / sudo check
     try:
-        member = await app.get_chat_member(chat_id, message.from_user.id)
-        is_admin = member.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER]
+        member = await app.get_chat_member(chat_id, user_id)
+        is_admin = member.status in (
+            ChatMemberStatus.ADMINISTRATOR,
+            ChatMemberStatus.OWNER,
+        )
     except Exception:
         is_admin = False
 
-    if not is_admin and message.from_user.id not in SUDOERS:
+    if not is_admin and user_id not in SUDOERS:
         return await message.reply_text("⚠️ ᴏɴʟʏ ᴀᴅᴍɪɴs ᴄᴀɴ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ.")
 
-    args = message.text.split(maxsplit=1)
+    args = message.text.split(maxsplit=1) if message.text else []
 
     if len(args) < 2:
         status = "✅ ᴇɴᴀʙʟᴇᴅ" if is_vclogger_enabled(chat_id) else "❌ ᴅɪsᴀʙʟᴇᴅ"
@@ -95,13 +107,13 @@ async def vclogger_command(_, message: Message):
             "❍ /vclogger enable/disable : ᴀʟᴛᴇʀɴᴀᴛɪᴠᴇ ᴄᴏᴍᴍᴀɴᴅs ᴛᴏ ᴍᴀɴᴀɢᴇ ᴠᴄ ʟᴏɢɢᴇʀ."
         )
 
-    action = args[1].lower()
+    action = args[1].lower().strip()
 
     if action in ["on", "yes", "enable", "true", "1"]:
         set_vclogger(chat_id, True)
         return await message.reply_text(
             "✅ **ᴠᴄ ʟᴏɢɢᴇʀ ᴇɴᴀʙʟᴇᴅ!**\n\n"
-            "ɪ ᴡɪʟʟ ɴᴏᴡ ᴀɴɴᴏᴜɴᴄᴇ ᴡʜᴇɴ ᴜsᴇʀs ᴊᴏɪɴ ᴏʀ ʟᴇᴀᴠᴇ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ."
+            "ɪ ɴᴏᴡ ᴀɴɴᴏᴜɴᴄᴇ ᴡʜᴇɴ ᴜsᴇʀs ᴊᴏɪɴ ᴏʀ ʟᴇᴀᴠᴇ ᴛʜᴇ ᴠᴏɪᴄᴇ ᴄʜᴀᴛ."
         )
 
     if action in ["off", "no", "disable", "false", "0"]:
@@ -137,11 +149,18 @@ async def vc_ended(_, message: Message):
 
 @app.on_message(filters.video_chat_members_invited)
 async def vc_members_invited(_, message: Message):
-    if not message.video_chat_members_invited:
+    invited = message.video_chat_members_invited
+    if not invited or not invited.users:
         return
+
     mentions = []
-    for u in message.video_chat_members_invited.users:
+    for u in invited.users:
         name = u.first_name or "User"
         mentions.append(f"[{name}](tg://user?id={u.id})")
-    text = "📢 **Voice Chat Invitation**\n\n" + ", ".join(mentions) + " invited to join! 🎙️"
+
+    text = (
+        "📢 **Voice Chat Invitation**\n\n"
+        + ", ".join(mentions)
+        + " invited to join! 🎙️"
+    )
     await message.reply_text(text)
