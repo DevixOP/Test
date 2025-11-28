@@ -168,5 +168,3 @@ async def vc_members_invited(_, message: Message):
         + " invited to join! 🎙️"
     )
     await message.reply_text(text)
-
-[1](https://github.com/DevixOP/Test/blob/ritik/EsproMusic/core/call.py)
