@@ -38,7 +38,6 @@ from EsproMusic.utils.stream.autoclear import auto_clean
 from EsproMusic.utils.thumbnails import get_thumb
 from strings import get_string
 
-from EsproMusic.plugins.tools.vclogger import process_vc_participant
 
 autoend = {}
 counter = {}
